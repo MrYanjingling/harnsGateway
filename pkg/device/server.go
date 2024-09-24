@@ -29,6 +29,7 @@ func InstallHandler(group *gin.RouterGroup, mgr *Manager) {
 	group.GET("/devices/:id", getDeviceById(mgr))
 	group.PUT("/devices/:id/:status", switchDeviceStatusById(mgr))
 	group.PUT("/devices/:id/action", controlDeviceById(mgr))
+	group.POST("/devices/upload/:name", uploadFile(mgr))
 
 }
 
@@ -296,6 +297,26 @@ func controlDeviceById(mgr *Manager) gin.HandlerFunc {
 		}
 
 		err := mgr.DeliverAction(id, actions)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, err)
+			return
+		}
+
+		c.Status(http.StatusAccepted)
+	}
+}
+
+func uploadFile(mgr *Manager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer c.Request.Body.Close()
+
+		id := c.Param("name")
+		file, err1 := c.FormFile("file")
+		if err1 != nil {
+			c.JSON(http.StatusBadRequest, response.NewMultiError(response.ErrMalformedJSON))
+		}
+		err := mgr.UpdateDeviceVariableByName(id, file)
 
 		if err != nil {
 			c.JSON(http.StatusBadRequest, err)

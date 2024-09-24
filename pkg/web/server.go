@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron/v3"
 	"harnsgateway/cmd/gateway/config"
 	"harnsgateway/cmd/gateway/options"
 	"harnsgateway/pkg/device"
@@ -80,6 +81,24 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 			klog.Error(err)
 		}
 		if err := srv.Shutdown(ctx); err != nil {
+			klog.Error(err)
+		}
+	}, nil
+}
+
+func (s *Server) Daemon() (func(ctx context.Context), error) {
+	cron := cron.New()
+
+	if _, err := cron.AddFunc("0/1 * * * *", func() {
+		s.Config.DeviceMgr.Daemon()
+	}); err != nil {
+		klog.V(2).InfoS("Failed insert into influxdb", "err", err)
+	}
+
+	cron.Start()
+
+	return func(ctx context.Context) {
+		if err := s.Config.DeviceMgr.ShutdownDaemon(ctx); err != nil {
 			klog.Error(err)
 		}
 	}, nil

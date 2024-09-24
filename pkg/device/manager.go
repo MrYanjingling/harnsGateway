@@ -2,19 +2,24 @@ package device
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/360EntSecGroup-Skylar/excelize"
+	"github.com/go-redis/redis/v8"
+	"github.com/influxdata/influxdb-client-go/v2/api/write"
 	"harnsgateway/pkg/apis"
 	"harnsgateway/pkg/apis/response"
 	"harnsgateway/pkg/gateway"
 	"harnsgateway/pkg/generic"
+	runtime2 "harnsgateway/pkg/protocol/modbus/runtime"
 	"harnsgateway/pkg/runtime"
 	"harnsgateway/pkg/runtime/constant"
+	"harnsgateway/pkg/ts"
 	v1 "harnsgateway/pkg/v1"
 	"k8s.io/klog/v2"
+	"mime/multipart"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,32 +29,36 @@ type Option func(*Manager)
 
 type Manager struct {
 	gatewayMeta      *gateway.GatewayMeta
-	mqttClient       mqtt.Client
+	redisClient      *redis.Client
 	mu               *sync.Mutex
 	deviceManager    map[string]DeviceManager
 	devices          *sync.Map
 	heartBeatDevices *sync.Map
+	tsManager        *ts.TsManager
 	store            *generic.Store
 	brokers          map[string]runtime.Broker
 	brokerReturnCh   map[string]chan *runtime.ParseVariableResult
 	stopCh           <-chan struct{}
 	deviceStatusCh   chan string
 	closers          []runtime.LabeledCloser
+	placeholder      string
 }
 
-func NewManager(store *generic.Store, mqttClient mqtt.Client, gatewayMeta *gateway.GatewayMeta, stop <-chan struct{}, opts ...Option) *Manager {
+func NewManager(store *generic.Store, tsManager *ts.TsManager, redisClient *redis.Client, gatewayMeta *gateway.GatewayMeta, placeholder string, stop <-chan struct{}, opts ...Option) *Manager {
 	m := &Manager{
 		gatewayMeta:      gatewayMeta,
-		mqttClient:       mqttClient,
+		redisClient:      redisClient,
 		mu:               &sync.Mutex{},
 		devices:          &sync.Map{},
 		heartBeatDevices: &sync.Map{},
 		deviceManager:    DeviceManagers,
+		tsManager:        tsManager,
 		brokers:          make(map[string]runtime.Broker, 0),
 		brokerReturnCh:   make(map[string]chan *runtime.ParseVariableResult, 0),
 		store:            store,
 		stopCh:           stop,
 		deviceStatusCh:   make(chan string, 0),
+		placeholder:      placeholder,
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -137,6 +146,53 @@ func (m *Manager) DeleteDevice(id string, version string) (runtime.Device, error
 
 	m.devices.Delete(device.GetID())
 	return device, nil
+}
+
+// 模拟modbus服务
+func (m *Manager) UpdateDeviceVariableByName(name string, file *multipart.FileHeader) error {
+	devices, _ := m.ListDevices(&runtime.DeviceFilter{
+		Name: name,
+	}, true)
+
+	device := devices[0]
+	md := device.(*runtime2.ModBusDevice)
+
+	open, _ := file.Open()
+	excel, _ := excelize.OpenReader(open)
+
+	sheetMap := excel.GetSheetMap()
+	rows := excel.GetRows(sheetMap[1])
+
+	if len(rows) > 1 {
+		variables := make([]*runtime2.Variable, 0)
+		variablesMap := make(map[string]*runtime2.Variable, 0)
+		m.cancelCollect(md)
+		for _, row := range rows[1:] {
+			atoi, _ := strconv.Atoi(row[2])
+			bit, _ := strconv.Atoi(row[3])
+			functionCode, _ := strconv.Atoi(row[4])
+			v := &runtime2.Variable{
+				DataType:     constant.StringToDataType[row[1]],
+				Name:         row[0],
+				Address:      uint(atoi),
+				Bits:         uint8(bit),
+				FunctionCode: uint8(functionCode),
+				Rate:         0,
+				Amount:       0,
+				AccessMode:   constant.AccessModeReadWrite,
+			}
+			variables = append(variables, v)
+			variablesMap[row[0]] = v
+		}
+
+		md.Variables = variables
+		md.VariablesMap = variablesMap
+		m.store.Update(md)
+
+		m.readyCollect(md)
+	}
+
+	return nil
 }
 
 func (m *Manager) UpdateDeviceById(id string, version string, newObj v1.DeviceType) (runtime.Device, error) {
@@ -311,11 +367,11 @@ func (m *Manager) readyCollect(obj runtime.Device) error {
 	m.brokers[obj.GetID()] = broker
 	m.brokerReturnCh[obj.GetID()] = results
 
-	topic := obj.GetTopic()
-	if len(topic) == 0 {
-		topic = fmt.Sprintf("data/%s/v1/%s", m.gatewayMeta.ID, obj.GetID())
-		obj.SetTopic(topic)
-	}
+	// topic := obj.GetTopic()
+	// if len(topic) == 0 {
+	// 	topic = fmt.Sprintf("data/%s/v1/%s", m.gatewayMeta.ID, obj.GetID())
+	// 	obj.SetTopic(topic)
+	// }
 
 	broker.Collect(context.Background())
 	go func(deviceId string, ch chan *runtime.ParseVariableResult) {
@@ -340,18 +396,20 @@ func (m *Manager) readyCollect(obj runtime.Device) error {
 								}
 								pds = append(pds, pd)
 							}
-							publishData := runtime.PublishData{Payload: runtime.Payload{Data: []runtime.TimeSeriesData{{
-								Timestamp: time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
-								Values:    pds,
-							}}}}
 
-							marshal, _ := json.Marshal(publishData)
-							token := m.mqttClient.Publish(topic, 1, false, marshal)
-							if token.WaitTimeout(mqttTimeout) && token.Error() == nil {
-								klog.V(5).InfoS("Succeed to publish MQTT", "topic", topic, "data", publishData)
-							} else {
-								klog.V(1).InfoS("Failed to publish MQTT", "topic", topic, "err", token.Error())
-							}
+							m.processData(pds)
+							// publishData := runtime.PublishData{Payload: runtime.Payload{Data: []runtime.TimeSeriesData{{
+							// 	Timestamp: time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+							// 	Values:    pds,
+							// }}}}
+							//
+							// marshal, _ := json.Marshal(publishData)
+							// token := m.mqttClient.Publish(topic, 1, false, marshal)
+							// if token.WaitTimeout(mqttTimeout) && token.Error() == nil {
+							// 	klog.V(5).InfoS("Succeed to publish MQTT", "topic", topic, "data", publishData)
+							// } else {
+							// 	klog.V(1).InfoS("Failed to publish MQTT", "topic", topic, "err", token.Error())
+							// }
 						} else {
 							v.(runtime.Device).SetCollectStatus(runtime.CollectStatusToString[runtime.CollectingError])
 						}
@@ -368,12 +426,16 @@ func (m *Manager) readyCollect(obj runtime.Device) error {
 	return nil
 }
 
+func (m *Manager) ShutdownDaemon(ctx context.Context) error {
+	return nil
+}
+
 func (m *Manager) Shutdown(context context.Context) error {
 	for _, c := range m.brokers {
 		c.Destroy(context)
 	}
 
-	m.mqttClient.Disconnect(2000)
+	_ = m.redisClient.Close()
 	var errs []string
 	for i := len(m.closers); i > 0; i-- {
 		lc := m.closers[i-1]
@@ -521,4 +583,80 @@ func (m *Manager) switchDeviceStatus(device runtime.Device, status string) {
 			return
 		}
 	}
+}
+
+func (m *Manager) processData(pds []runtime.PointData) {
+	start := time.Now()
+
+	thingTimeSeries := make(map[string]map[string]interface{}, 0)
+
+	for _, pd := range pds {
+		deviceProperty := strings.Split(pd.DataPointId, m.placeholder)
+		if v, exist := thingTimeSeries[deviceProperty[0]]; exist {
+			v[deviceProperty[1]] = pd.Value
+		} else {
+			pv := map[string]interface{}{deviceProperty[1]: pd.Value}
+			thingTimeSeries[deviceProperty[0]] = pv
+		}
+	}
+
+	for thingCode, kv := range thingTimeSeries {
+
+		set := m.redisClient.HSet(context.Background(), thingCode, kv)
+		if set.Err() != nil {
+			klog.V(2).InfoS("Failed save data to redis", "thingCode", thingCode, "err", set.Err())
+		}
+	}
+	end := time.Now()
+	klog.V(3).InfoS("Insert into redis", "time", end.Sub(start).Seconds())
+}
+
+func (m *Manager) Daemon() {
+	// now := time.Now()
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+
+	t := time.Now().In(loc)
+	t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, loc)
+
+	// points := make([]*write.Point, 0)
+	// thingTimeSeries := make(map[string]map[string]interface{}, 0)
+
+	m.devices.Range(func(key, value any) bool {
+		v := value.(runtime.Device)
+		variables := v.GetVariables()
+
+		points := make([]*write.Point, 0)
+		thingTimeSeries := make(map[string]map[string]interface{}, 0)
+
+		for _, variable := range variables {
+			k := variable.GetVariableName()
+			vv := variable.GetValue()
+			deviceProperty := strings.Split(k, m.placeholder)
+			if v, exist := thingTimeSeries[deviceProperty[0]]; exist {
+				v[deviceProperty[1]] = vv
+			} else {
+				pv := map[string]interface{}{deviceProperty[1]: vv}
+				thingTimeSeries[deviceProperty[0]] = pv
+			}
+		}
+
+		go m.insertIntoInfluxdb(thingTimeSeries, points, t)
+
+		return true
+	})
+
+	// m.insertIntoInfluxdb(thingTimeSeries, points, t)
+
+}
+
+func (m *Manager) insertIntoInfluxdb(thingTimeSeries map[string]map[string]interface{}, points []*write.Point, t time.Time) {
+	start := time.Now()
+	for thingCode, kv := range thingTimeSeries {
+		point := write.NewPoint("device_data_electric_meter", map[string]string{"ti": thingCode}, kv, t)
+		points = append(points, point)
+	}
+
+	m.tsManager.SaveOrUpdateTimeSeries(points)
+	end := time.Now()
+	klog.V(3).InfoS("Insert into redis", "time", end.Sub(start).Seconds())
 }

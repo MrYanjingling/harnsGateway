@@ -1,9 +1,11 @@
 package runtime
 
 import (
+	"fmt"
 	"harnsgateway/pkg/runtime"
 	"harnsgateway/pkg/runtime/constant"
 	"harnsgateway/pkg/utils/binutil"
+	"strconv"
 )
 
 var _ runtime.Device = (*ModBusDevice)(nil)
@@ -67,6 +69,16 @@ func (m *ModBusDevice) GetVariable(key string) (rv runtime.VariableValue, exist 
 		exist = isExist
 	}
 	return
+}
+
+func (m *ModBusDevice) GetVariables() []runtime.VariableValue {
+	rvs := make([]runtime.VariableValue, 0)
+
+	for _, variable := range m.Variables {
+		rvs = append(rvs, variable)
+	}
+
+	return rvs
 }
 
 type Address struct {
@@ -237,6 +249,11 @@ func (df *ModBusDataFrame) ParseVariableValue(data []byte) []*Variable {
 				} else {
 					value = v
 				}
+
+				if value != float32(int(value.(float32))) {
+					value, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", value), 64)
+				}
+
 			case constant.FLOAT64:
 				var v interface{}
 				switch df.MemoryLayout {
@@ -253,6 +270,10 @@ func (df *ModBusDataFrame) ParseVariableValue(data []byte) []*Variable {
 					value = (v.(float64)) * vp.Variable.Rate
 				} else {
 					value = v
+				}
+
+				if value != float64(int(value.(float64))) {
+					value, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", value), 64)
 				}
 			}
 		}

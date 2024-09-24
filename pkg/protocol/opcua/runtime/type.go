@@ -62,6 +62,16 @@ func (o *OpcUaDevice) GetVariable(key string) (rv runtime.VariableValue, exist b
 	return
 }
 
+func (m *OpcUaDevice) GetVariables() []runtime.VariableValue {
+	rvs := make([]runtime.VariableValue, 0)
+
+	for _, variable := range m.Variables {
+		rvs = append(rvs, variable)
+	}
+
+	return rvs
+}
+
 type Address struct {
 	Location string  `json:"location"` // 地址路径
 	Option   *Option `json:"option"`   // 地址其他参数

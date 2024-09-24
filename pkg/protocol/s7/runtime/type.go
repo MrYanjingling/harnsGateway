@@ -314,6 +314,16 @@ func (s *S7Device) GetVariable(key string) (rv runtime.VariableValue, exist bool
 	return
 }
 
+func (m *S7Device) GetVariables() []runtime.VariableValue {
+	rvs := make([]runtime.VariableValue, 0)
+
+	for _, variable := range m.Variables {
+		rvs = append(rvs, variable)
+	}
+
+	return rvs
+}
+
 type S7Address struct {
 	Location string           `json:"location"` // 地址路径
 	Option   *S7AddressOption `json:"option"`   // 地址其他参数

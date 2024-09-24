@@ -2,15 +2,16 @@ package app
 
 import (
 	"context"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"harnsgateway/cmd/gateway/options"
-	"harnsgateway/pkg/generic"
+	"harnsgateway/cmd/cim/options"
+	"harnsgateway/pkg/cim"
 	baseoptions "harnsgateway/pkg/generic/options"
 	"harnsgateway/pkg/version"
 	"harnsgateway/pkg/version/verflag"
-	"harnsgateway/pkg/web"
-	utilserrors "k8s.io/apimachinery/pkg/util/errors"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	"os"
 	"os/signal"
@@ -18,15 +19,15 @@ import (
 )
 
 const (
-	ComponentGateway = "harns-gateway"
+	ComponentConsumer = "cim"
 )
 
-func NewGatewayCmd() *cobra.Command {
-	cleanFlagSet := pflag.NewFlagSet(ComponentGateway, pflag.ContinueOnError)
+func NewCimCmd() *cobra.Command {
+	cleanFlagSet := pflag.NewFlagSet(ComponentConsumer, pflag.ContinueOnError)
 	o := options.NewDefaultOptions()
 	cmd := &cobra.Command{
-		Use:                ComponentGateway,
-		Long:               `The harns gateway manages the device, collect and control.`,
+		Use:                ComponentConsumer,
+		Long:               `Cim.`,
 		DisableFlagParsing: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// initial flag parse, since we disable cobra's flag parsing
@@ -44,7 +45,6 @@ func NewGatewayCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			verflag.PrintAndExitIfRequested()
 			// short-circuit on help
 			baseoptions.PrintHelpAndExitIfRequested(cmd, cleanFlagSet)
 
@@ -59,7 +59,7 @@ func NewGatewayCmd() *cobra.Command {
 			}
 
 			if errs := options.Validate(o); len(errs) != 0 {
-				return utilserrors.NewAggregate(errs)
+				return utilerrors.NewAggregate(errs)
 			}
 
 			// To help debugging, immediately log version
@@ -77,28 +77,17 @@ func NewGatewayCmd() *cobra.Command {
 
 func run(o *options.Options) error {
 	stopCh := make(chan struct{})
-
-	c, err := o.Config(stopCh)
+	m, err := o.Config(stopCh)
 	if err != nil {
 		return err
 	}
 
-	// exit, err := startServer(generic.Default(), o, &c.ModelConfig)
-	server, err := web.NewServer(generic.Default(), o, c)
+	daemon, err := Daemon(m.CimMgr)
 	if err != nil {
 		return err
 	}
 
-	_, err = server.Daemon()
-	if err != nil {
-		return err
-	}
-
-	exit, err := server.Serve()
-	if err != nil {
-		return err
-	}
-	klog.V(1).InfoS("Server started", "port", o.Port)
+	klog.V(1).InfoS("Server started")
 	// Graceful shutdown
 	// Wait for interrupt signal to gracefully shutdown the server
 	exitCh := make(chan os.Signal, 1)
@@ -107,11 +96,28 @@ func run(o *options.Options) error {
 	// kill -9 is syscall.SIGKILL but can't be catch, so don't need add it
 	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
 	<-exitCh
-	ctx, cancel := context.WithTimeout(context.Background(), o.Wait)
+	_, cancel := context.WithTimeout(context.Background(), o.Wait)
 	defer cancel()
-
-	exit(ctx)
+	daemon(context.Background())
+	// exit(ctx)
 	close(stopCh)
 
 	return nil
+}
+
+func Daemon(manager *cim.Manager) (func(ctx context.Context), error) {
+	manager.Polling()
+
+	cron := cron.New()
+	if _, err := cron.AddFunc("0 2 * * *", func() {
+		manager.Polling()
+	}); err != nil {
+		klog.V(2).InfoS("Failed to collect FMCS data", "err", err)
+	}
+
+	cron.Start()
+
+	return func(ctx context.Context) {
+
+	}, nil
 }
