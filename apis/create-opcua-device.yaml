@@ -1,0 +1,138 @@
+openapi: 3.0.1
+info:
+  description: "API defining resources and operations for configuring, reading and managing Device."
+  version: "0.0.3"
+  title: "Device Manager API"
+servers:
+  - url: "/api/v1"
+tags:
+  - name: Device
+    description: Managing Device
+paths:
+  /devices:
+    post:
+      tags:
+        - Device
+      summary: Create OpcUa Device
+      operationId: createDevice
+      requestBody:
+        description: OpcUa Device
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpcUaDevice'
+        required: true
+      responses:
+        201:
+          description: The device has been created
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: ETag hash of the resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpcUaDevice'
+        400:
+          description: Invalid request.
+        500:
+          description: Internal Server Error.
+components:
+  schemas:
+    OpcUaDevice:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: 设备名称.
+          minLength: 1
+          maxLength: 128
+          pattern: '[\p{L}_0-9_\. ]+'
+          example: 模拟opcua服务
+        deviceCode:
+          type: string
+          description: 设备编码.
+          maxLength: 256
+          example: abcdfsdfe
+        deviceType:
+          type: string
+          default: opcUa
+          description: 设备类型.
+        deviceModel:
+          type: string
+          enum:
+            - opcUa
+          description: 设备型号.
+          example: opcUa
+        collectorCycle:
+          type: integer
+          description: 采集周期,单位为秒.
+          default: 1
+          example: 1
+        variableInterval:
+          type: integer
+          description: 变量间隔.
+          nullable: true
+        address:
+          type: object
+          properties:
+            location:
+              type: string
+              description: IP地址
+            option:
+              type: object
+              description: 其他参数
+              properties:
+                port:
+                  type: integer
+                  description: IP地址的端口.
+                  example: 502
+                username:
+                  type: string
+                  description: 用户名.
+                password:
+                  type: string
+                  description: 密码.
+          description: OpcUa服务参数.
+        topic:
+          type: string
+          description: MQTT消息队列Topic.
+          nullable: false
+        variables:
+          type: array
+          description: 变量组.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: 变量名称.
+                example: A
+              datatype:
+                type: string
+                description: 变量数据类型.
+                enum:
+                  - string
+                  - number
+                example: string
+              address:
+                type: integer
+                description: 变量地址.
+                example: 16
+              namespace:
+                type: string
+                description: NameSpace空间
+              defaultValue:
+                type: number
+                description: 默认值
+                nullable: true
+              accessMode:
+                type: string
+                description: 读写属性
+                enum:
+                  - r
+                  - rw
+                example: rw
