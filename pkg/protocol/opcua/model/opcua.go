@@ -16,7 +16,7 @@ type OpcUa struct {
 
 func (o *OpcUa) NewClients(address *opc.Address, dataFrameCount int) (*opc.Clients, error) {
 	tcpChannel := dataFrameCount/5 + 1
-	// usernamePasswordAuth := len(address.Option.Username) > 0 && len(address.Option.Password) > 0
+	usernamePasswordAuth := len(address.Option.Username) > 0 && len(address.Option.Password) > 0
 
 	var endpoint string
 	if address.Option.Port <= 0 {
@@ -24,19 +24,26 @@ func (o *OpcUa) NewClients(address *opc.Address, dataFrameCount int) (*opc.Clien
 	} else {
 		endpoint = fmt.Sprintf("%s:%d", address.Location, address.Option.Port)
 	}
-
-	opts := []opcua.Option{
-		opcua.SecurityMode(ua.MessageSecurityModeNone),
+	// var endpoints []*ua.EndpointDescription
+	endpoints, err := opcua.GetEndpoints(context.Background(), endpoint)
+	if err != nil {
+		klog.V(2).InfoS("Failed to connect opc ua server")
+		return nil, err
 	}
-	// if usernamePasswordAuth {
-	// 	ep := ua.EndpointDescription{
-	// 		EndpointURL:       endpoint,
-	// 		SecurityMode:      ua.MessageSecurityModeNone,
-	// 		SecurityPolicyURI: ua.SecurityPolicyURINone,
-	// 	}
-	// 	opts = append(opts, opcua.AuthUsername(address.Option.Username, address.Option.Password))
-	// 	opts = append(opts, opcua.SecurityFromEndpoint(&ep, ua.UserTokenTypeUserName))
-	// }
+	var ep *ua.EndpointDescription
+	for _, endpointDescription := range endpoints {
+		if endpointDescription.SecurityMode == ua.MessageSecurityModeNone {
+			ep = endpointDescription
+		}
+	}
+
+	opts := []opcua.Option{}
+	if usernamePasswordAuth {
+		opts = append(opts, opcua.AuthUsername(address.Option.Username, address.Option.Password))
+		opts = append(opts, opcua.SecurityFromEndpoint(ep, ua.UserTokenTypeUserName))
+	} else {
+		opts = append(opts, opcua.SecurityFromEndpoint(ep, ua.UserTokenTypeAnonymous))
+	}
 
 	ms := list.New()
 	for i := 0; i < tcpChannel; i++ {
