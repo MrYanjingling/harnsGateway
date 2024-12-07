@@ -168,7 +168,7 @@ func (df *ModBusDataFrame) ParseVariableValue(data []byte) []*Variable {
 					v = int16(binutil.ParseUint16LittleEndian(vpData))
 				}
 				if vp.Variable.Rate != 0 && vp.Variable.Rate != 1 {
-					value = int16((v.(float64)) * vp.Variable.Rate)
+					value = int16(float64(v.(int16)) * vp.Variable.Rate)
 				} else {
 					value = v
 				}
@@ -181,7 +181,7 @@ func (df *ModBusDataFrame) ParseVariableValue(data []byte) []*Variable {
 					v = binutil.ParseUint16LittleEndian(vpData)
 				}
 				if vp.Variable.Rate != 0 && vp.Variable.Rate != 1 {
-					value = uint16((v.(float64)) * vp.Variable.Rate)
+					value = uint16(float64(v.(uint16)) * vp.Variable.Rate)
 				} else {
 					value = v
 				}
@@ -199,7 +199,7 @@ func (df *ModBusDataFrame) ParseVariableValue(data []byte) []*Variable {
 					v = int32(binutil.ParseUint32LittleEndian(vpData))
 				}
 				if vp.Variable.Rate != 0 && vp.Variable.Rate != 1 {
-					value = int32((v.(float64)) * vp.Variable.Rate)
+					value = int32(float64(v.(int32)) * vp.Variable.Rate)
 				} else {
 					value = v
 				}
@@ -216,7 +216,7 @@ func (df *ModBusDataFrame) ParseVariableValue(data []byte) []*Variable {
 					v = int64(binutil.ParseUint64LittleEndian(vpData))
 				}
 				if vp.Variable.Rate != 0 && vp.Variable.Rate != 1 {
-					value = int64((v.(float64)) * vp.Variable.Rate)
+					value = int64((float64(v.(int64))) * vp.Variable.Rate)
 				} else {
 					value = v
 				}
@@ -233,7 +233,7 @@ func (df *ModBusDataFrame) ParseVariableValue(data []byte) []*Variable {
 					v = binutil.ParseFloat32LittleEndian(vpData)
 				}
 				if vp.Variable.Rate != 0 && vp.Variable.Rate != 1 {
-					value = float32((v.(float64)) * vp.Variable.Rate)
+					value = v.(float32) * float32(vp.Variable.Rate)
 				} else {
 					value = v
 				}
