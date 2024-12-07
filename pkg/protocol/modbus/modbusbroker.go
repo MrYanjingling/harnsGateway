@@ -559,7 +559,7 @@ func (broker *ModbusBroker) generateActionBytes(memoryLayout constant.MemoryLayo
 
 				var value int16
 				if variable.Rate != 0 && variable.Rate != 1 {
-					value = int16((variable.Value.(float64)) * variable.Rate)
+					value = int16(float64(variable.Value.(int16)) / variable.Rate)
 				} else {
 					value = variable.Value.(int16)
 				}
@@ -574,7 +574,7 @@ func (broker *ModbusBroker) generateActionBytes(memoryLayout constant.MemoryLayo
 
 				var value uint16
 				if variable.Rate != 0 && variable.Rate != 1 {
-					value = uint16((variable.Value.(float64)) * variable.Rate)
+					value = uint16(float64(variable.Value.(uint16)) / variable.Rate)
 				} else {
 					value = variable.Value.(uint16)
 				}
@@ -592,7 +592,7 @@ func (broker *ModbusBroker) generateActionBytes(memoryLayout constant.MemoryLayo
 
 				var value int32
 				if variable.Rate != 0 && variable.Rate != 1 {
-					value = int32((variable.Value.(float64)) * variable.Rate)
+					value = int32(float64(variable.Value.(int32)) / variable.Rate)
 				} else {
 					value = variable.Value.(int32)
 				}
@@ -615,7 +615,7 @@ func (broker *ModbusBroker) generateActionBytes(memoryLayout constant.MemoryLayo
 
 				var value int64
 				if variable.Rate != 0 && variable.Rate != 1 {
-					value = int64((variable.Value.(float64)) * variable.Rate)
+					value = int64(float64(variable.Value.(int64)) / variable.Rate)
 				} else {
 					value = variable.Value.(int64)
 				}
@@ -638,7 +638,7 @@ func (broker *ModbusBroker) generateActionBytes(memoryLayout constant.MemoryLayo
 
 				var value float32
 				if variable.Rate != 0 && variable.Rate != 1 {
-					value = float32((variable.Value.(float64)) * variable.Rate)
+					value = float32(float64(variable.Value.(float32)) / variable.Rate)
 				} else {
 					value = variable.Value.(float32)
 				}
@@ -661,7 +661,7 @@ func (broker *ModbusBroker) generateActionBytes(memoryLayout constant.MemoryLayo
 
 				var value float64
 				if variable.Rate != 0 && variable.Rate != 1 {
-					value = (variable.Value.(float64)) * variable.Rate
+					value = (variable.Value.(float64)) / variable.Rate
 				} else {
 					value = variable.Value.(float64)
 				}
