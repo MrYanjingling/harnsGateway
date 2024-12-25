@@ -7,7 +7,7 @@ type OpcUaVariable struct {
 	DataType     string              `json:"dataType" binding:"required"`                                   // string number
 	Name         string              `json:"name" binding:"required,min=1,max=64,excludesall=\u002F\u005C"` // 变量名称
 	Address      interface{}         `json:"address" binding:"required"`                                    // 变量地址
-	NameSpace    uint16              `json:"Namespace" binding:"required"`                                  // 命名空间
+	NameSpace    uint16              `json:"namespace" binding:"required"`                                  // 命名空间
 	DefaultValue interface{}         `json:"defaultValue,omitempty"`                                        // 默认值
 	AccessMode   constant.AccessMode `json:"accessMode" binding:"required"`                                 // 读写属性
 }

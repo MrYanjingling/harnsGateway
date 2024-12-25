@@ -103,7 +103,7 @@ func (m *OpcUaDeviceManager) UpdateDevice(id string, deviceType v1.DeviceType, d
 
 	delChars, _, _ := differenceutil.DifferenceAndIntersectionObjects(copyDevice.Variables, opcUaDevice.Variables,
 		func(value interface{}) string { return value.(*opcuaruntime.Variable).Name },
-		func(value interface{}) string { return value.(*v1.OpcUaDevice).Name })
+		func(value interface{}) string { return value.(*v1.OpcUaVariable).Name })
 
 	i := 0
 	delCharSet := sets.NewString(delChars...)
