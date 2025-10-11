@@ -160,5 +160,15 @@ func ParseTypeFilter(filter *DeviceFilter) []predicateType {
 		}
 	}
 
+	if len(filter.DeviceType) > 0 {
+		p := func(dd Device) bool {
+			if filter.DeviceType == dd.GetDeviceType() {
+				return true
+			}
+			return false
+		}
+		predicates = append(predicates, p)
+	}
+
 	return predicates
 }

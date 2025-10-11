@@ -218,6 +218,7 @@ func (m *Manager) UpdateDeviceById(id string, version string, newObj v1.DeviceTy
 		return nil, err
 	}
 
+	m.cancelCollect(device)
 	updated, err := m.store.Update(device)
 	if err != nil {
 		klog.V(2).InfoS("Failed to update device", "error", err)
@@ -225,6 +226,7 @@ func (m *Manager) UpdateDeviceById(id string, version string, newObj v1.DeviceTy
 	}
 	rd := updated.(runtime.Device)
 	m.devices.Store(rd.GetID(), updated)
+	m.readyCollect(device)
 
 	return updated, nil
 }
@@ -592,11 +594,13 @@ func (m *Manager) processData(pds []runtime.PointData) {
 
 	for _, pd := range pds {
 		deviceProperty := strings.Split(pd.DataPointId, m.placeholder)
-		if v, exist := thingTimeSeries[deviceProperty[0]]; exist {
-			v[deviceProperty[1]] = pd.Value
+		key := deviceProperty[0] + m.placeholder + deviceProperty[1]
+
+		if v, exist := thingTimeSeries[key]; exist {
+			v[deviceProperty[2]] = pd.Value
 		} else {
-			pv := map[string]interface{}{deviceProperty[1]: pd.Value}
-			thingTimeSeries[deviceProperty[0]] = pv
+			pv := map[string]interface{}{deviceProperty[2]: pd.Value}
+			thingTimeSeries[key] = pv
 		}
 	}
 
@@ -608,12 +612,12 @@ func (m *Manager) processData(pds []runtime.PointData) {
 		}
 	}
 	end := time.Now()
-	klog.V(3).InfoS("Insert into redis", "time", end.Sub(start).Seconds())
+	klog.V(5).InfoS("Insert into redis", "time", end.Sub(start).Seconds())
 }
 
 func (m *Manager) Daemon() {
 	// now := time.Now()
-	loc, _ := time.LoadLocation("Asia/Shanghai")
+	loc, _ := time.LoadLocation("UTC")
 
 	t := time.Now().In(loc)
 	t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, loc)
@@ -623,24 +627,48 @@ func (m *Manager) Daemon() {
 
 	m.devices.Range(func(key, value any) bool {
 		v := value.(runtime.Device)
+
+		if v.GetCollectStatus() != runtime.CollectStatusToString[runtime.Collecting] {
+			return true
+		}
+
 		variables := v.GetVariables()
 
 		points := make([]*write.Point, 0)
-		thingTimeSeries := make(map[string]map[string]interface{}, 0)
+		thingTimeSeries := make(map[string]map[string]map[string]interface{}, 0)
 
 		for _, variable := range variables {
 			k := variable.GetVariableName()
 			vv := variable.GetValue()
+			if vv == nil {
+				continue
+			}
 			deviceProperty := strings.Split(k, m.placeholder)
-			if v, exist := thingTimeSeries[deviceProperty[0]]; exist {
-				v[deviceProperty[1]] = vv
+
+			if len(deviceProperty) < 3 {
+				return true
+			}
+
+			measurement := deviceProperty[0]
+			deviceCode := deviceProperty[1]
+			property := deviceProperty[2]
+
+			if _, exist := thingTimeSeries[measurement]; !exist {
+				thingTimeSeries[measurement] = map[string]map[string]interface{}{}
+			}
+
+			devicePropertyMap := thingTimeSeries[measurement]
+			if v, exist := devicePropertyMap[deviceCode]; exist {
+				v[property] = vv
 			} else {
-				pv := map[string]interface{}{deviceProperty[1]: vv}
-				thingTimeSeries[deviceProperty[0]] = pv
+				pv := map[string]interface{}{property: vv}
+				devicePropertyMap[deviceCode] = pv
 			}
 		}
 
-		go m.insertIntoInfluxdb(thingTimeSeries, points, t)
+		for measurement, ts := range thingTimeSeries {
+			go m.insertIntoInfluxdb(measurement, ts, points, t)
+		}
 
 		return true
 	})
@@ -649,14 +677,14 @@ func (m *Manager) Daemon() {
 
 }
 
-func (m *Manager) insertIntoInfluxdb(thingTimeSeries map[string]map[string]interface{}, points []*write.Point, t time.Time) {
+func (m *Manager) insertIntoInfluxdb(measurement string, thingTimeSeries map[string]map[string]interface{}, points []*write.Point, t time.Time) {
 	start := time.Now()
 	for thingCode, kv := range thingTimeSeries {
-		point := write.NewPoint("device_data_electric_meter", map[string]string{"ti": thingCode}, kv, t)
+		point := write.NewPoint(measurement, map[string]string{"ti": thingCode}, kv, t)
 		points = append(points, point)
 	}
-
+	klog.V(3).InfoS("Insert into influxdb", "points", points)
 	m.tsManager.SaveOrUpdateTimeSeries(points)
 	end := time.Now()
-	klog.V(3).InfoS("Insert into redis", "time", end.Sub(start).Seconds())
+	klog.V(5).InfoS("Insert into influxdb", "time", end.Sub(start).Seconds())
 }

@@ -11,6 +11,7 @@ import (
 	"harnsgateway/pkg/runtime/constant"
 	"io"
 	"k8s.io/klog/v2"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -47,8 +48,16 @@ func NewBroker(d runtime.Device) (runtime.Broker, chan *runtime.ParseVariableRes
 		for _, variable := range variables {
 			switch variable.DataType {
 			case constant.NUMBER:
-				address := variable.Address.(float64)
-				id := ua.NewNumericNodeID(variable.Namespace, uint32(address))
+				var id *ua.NodeID
+				if address, isNumber := variable.Address.(float64); isNumber {
+					id = ua.NewNumericNodeID(variable.Namespace, uint32(address))
+				} else if address, isString := variable.Address.(string); isString {
+					iAddress, err := strconv.Atoi(address)
+					if err != nil {
+						klog.V(2).InfoS("Failed to parse string address to uint32")
+					}
+					id = ua.NewNumericNodeID(variable.Namespace, uint32(iAddress))
+				}
 				requestVariables = append(requestVariables, &ua.ReadValueID{NodeID: id})
 			case constant.STRING:
 				address := variable.Address.(string)
@@ -200,6 +209,14 @@ func (broker *OpcUaBroker) retry(fun func(m opcuaruntime.Messenger, dataFrame *O
 			i = i - 1
 			continue
 		case errors.Is(err, ua.StatusBadSessionNotActivated):
+			newMessenger, err := broker.Clients.NewMessenger()
+			if err != nil {
+				return err
+			}
+			m.Reset(newMessenger)
+			i = i - 1
+			continue
+		case errors.Is(err, ua.StatusBadServerNotConnected):
 			newMessenger, err := broker.Clients.NewMessenger()
 			if err != nil {
 				return err

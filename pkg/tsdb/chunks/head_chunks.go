@@ -29,9 +29,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
-	"lightiot/pkg/tsdb/chunkenc"
-	tsdb_errors "lightiot/pkg/tsdb/errors"
-	"lightiot/pkg/tsdb/fileutil"
+	"harnsgateway/pkg/tsdb/chunkenc"
+	tsdb_errors "harnsgateway/pkg/tsdb/errors"
+	"harnsgateway/pkg/tsdb/fileutil"
 )
 
 // Head chunk file header fields constants.
@@ -86,7 +86,7 @@ func (e *CorruptionErr) Error() string {
 type ChunkDiskMapper struct {
 	curFileNumBytes atomic.Int64 // Bytes written in current open file.
 
-	/// Writer.
+	// / Writer.
 	dir             *os.File
 	writeBufferSize int
 
@@ -99,7 +99,7 @@ type ChunkDiskMapper struct {
 	crc32        hash.Hash
 	writePathMtx sync.Mutex
 
-	/// Reader.
+	// / Reader.
 	// The int key in the map is the file number on the disk.
 	mmappedChunkFiles map[int]*mmappedChunkFile // Contains the m-mapped files for each chunk file mapped with its index.
 	closers           map[int]io.Closer         // Closers for resources behind the byte slices.

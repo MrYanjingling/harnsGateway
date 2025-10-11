@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"lightiot/pkg/tsdb/chunkenc"
+	"harnsgateway/pkg/tsdb/chunkenc"
 )
 
 func TestChunkDiskMapper_WriteChunk_Chunk_IterateChunks(t *testing.T) {

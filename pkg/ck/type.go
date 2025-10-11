@@ -1,12 +1,10 @@
-package cim
+package ck
 
 // DWS OUT FACTORY EMS_V
 type CimData struct {
-	Factory   string `gorm:"column:FACTORY_NAME"`
-	Time      string `gorm:"column:DATE_TIMEKEY"`
-	Count     int    `gorm:"column:OUT_TOTAL"`
-	PlanInput int    `gorm:"column:PLAN_INPUT_QTY"`
-	RealInput int    `gorm:"column:REAL_INPUT_QTY"`
+	Factory string `gorm:"column:FACTORY"`
+	Time    string `gorm:"column:DATE_TIMEKEY"`
+	Count   int    `gorm:"column:OUT_TOTAL"`
 }
 
 // ems_manual_production

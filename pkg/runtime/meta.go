@@ -32,12 +32,12 @@ var CollectStatusToString = map[CollectStatus]string{
 	Error:           "error",
 }
 var StringToCollectStatus = map[string]CollectStatus{
-	"collecting":      Collecting,
-	"collectingError": CollectingError,
-	"unconnected":     Unconnected,
-	"emptyVariable":   EmptyVariable,
-	"stopped":         Stopped,
-	"error":           Error,
+	"collecting":      Collecting,      // 采集中
+	"collectingError": CollectingError, // 采集错误
+	"unconnected":     Unconnected,     // 未连接
+	"emptyVariable":   EmptyVariable,   // 变量为空
+	"stopped":         Stopped,         // 停止
+	"error":           Error,           // 错误
 }
 
 const (
@@ -132,7 +132,6 @@ type DeviceMeta struct {
 	DeviceType    string `json:"deviceType"`
 	DeviceModel   string `json:"deviceModel"`
 	CollectStatus string `json:"collectStatus"`
-	// VariablesMap  map[string]VariableValue `json:"-"`
 }
 
 func (d *DeviceMeta) GetVariables() []VariableValue {

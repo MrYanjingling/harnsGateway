@@ -78,8 +78,13 @@ func (m *Manager) ImportTagNames(file *multipart.FileHeader) error {
 	if len(rows) > 1 {
 		for _, row := range rows[1:] {
 			tn := row[0]
-			if !strings.Contains(tn, ".VAL_Actl") {
-				tn = fmt.Sprintf("%s%s", tn, ".VAL_Actl")
+			if !strings.Contains(tn, ".VAL_Actl") || !strings.Contains(tn, ".VAL") {
+
+				if strings.Contains(tn, "PCW") {
+					tn = fmt.Sprintf("%s%s", tn, ".VAL")
+				} else {
+					tn = fmt.Sprintf("%s%s", tn, ".VAL_Actl")
+				}
 
 			}
 			tagNames = append(tagNames, tn)
@@ -144,6 +149,10 @@ func (m *Manager) Polling() {
 	for index, dataTime := range data {
 		tn := dataTime.TagName
 		if suffix, found := strings.CutSuffix(tn, ".VAL_Actl"); found {
+			tn = suffix
+		}
+
+		if suffix, found := strings.CutSuffix(tn, ".VAL"); found {
 			tn = suffix
 		}
 

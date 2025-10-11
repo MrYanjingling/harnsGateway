@@ -7,9 +7,9 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"harnsgateway/cmd/cim/config"
-	"harnsgateway/cmd/cim/options"
-	"harnsgateway/pkg/cim"
+	"harnsgateway/cmd/clickhouse/config"
+	"harnsgateway/cmd/clickhouse/options"
+	"harnsgateway/pkg/ck"
 	"harnsgateway/pkg/generic"
 	baseoptions "harnsgateway/pkg/generic/options"
 	"harnsgateway/pkg/version"
@@ -24,15 +24,15 @@ import (
 )
 
 const (
-	ComponentConsumer = "cim"
+	ComponentConsumer = "ck"
 )
 
-func NewCimCmd() *cobra.Command {
+func NewCkCmd() *cobra.Command {
 	cleanFlagSet := pflag.NewFlagSet(ComponentConsumer, pflag.ContinueOnError)
 	o := options.NewDefaultOptions()
 	cmd := &cobra.Command{
 		Use:                ComponentConsumer,
-		Long:               `Cim.`,
+		Long:               `The IoT Consumer is a daemon that consumes and handles the jobs of IoT.`,
 		DisableFlagParsing: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// initial flag parse, since we disable cobra's flag parsing
@@ -97,12 +97,12 @@ func run(o *options.Options) error {
 		return err
 	}
 
-	daemon, err := Daemon(m.CimMgr)
+	daemon, err := Daemon(m.CkMgr)
 	if err != nil {
 		return err
 	}
 
-	klog.V(1).InfoS("Server started")
+	klog.V(1).InfoS("Server started", "port", o.Port)
 	// Graceful shutdown
 	// Wait for interrupt signal to gracefully shutdown the server
 	exitCh := make(chan os.Signal, 1)
@@ -121,19 +121,10 @@ func run(o *options.Options) error {
 	return nil
 }
 
-func Daemon(manager *cim.Manager) (func(ctx context.Context), error) {
-	// manager.Polling()
-
-	cron := cron.New()
-	// if _, err := cron.AddFunc("0 2 * * *", func() {
-	// 	manager.Polling()
-	// }); err != nil {
-	// 	klog.V(2).InfoS("Failed to collect FMCS data", "err", err)
-	// }
-
-	if _, err := cron.AddFunc("0 0/1 * * *", func() {
+func Daemon(manager *ck.Manager) (func(ctx context.Context), error) {
+	cron := NewWithSeconds()
+	if _, err := cron.AddFunc("* * * * *", func() {
 		manager.Polling()
-		klog.V(2).InfoS("Succeed to collect FMCS data")
 	}); err != nil {
 		klog.V(2).InfoS("Failed to collect FMCS data", "err", err)
 	}
@@ -145,12 +136,23 @@ func Daemon(manager *cim.Manager) (func(ctx context.Context), error) {
 	}, nil
 }
 
+func NewWithSeconds() *cron.Cron {
+	secondParser := cron.NewParser(cron.Second | cron.Minute |
+		cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
+	return cron.New(cron.WithParser(secondParser), cron.WithChain())
+}
+
+type Server struct {
+	*generic.Server
+	*config.Config
+}
+
 func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*Server, error) {
 	allowMethods := []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodPut, http.MethodPatch}
 
 	s := &generic.Server{
 		Router:  router,
-		Port:    o.Port,
+		Port:    "8812",
 		Methods: allowMethods,
 	}
 
@@ -166,8 +168,8 @@ func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*
 }
 
 func (s *Server) InstallHandlers() {
-	v1 := s.Router.Group("/api/v1")
-	cim.InstallHandler(v1, s.Config.CimMgr)
+	_ = s.Router.Group("/api/v1")
+	// data.InstallHandler(v1, s.Config.CkMgr)
 }
 
 func (s *Server) Serve() (func(ctx context.Context), error) {
@@ -183,16 +185,11 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 
 	return func(ctx context.Context) {
 		srv.SetKeepAlivesEnabled(false)
-		if err := s.Config.CimMgr.Shutdown(ctx); err != nil {
+		if err := s.Config.CkMgr.Shutdown(ctx); err != nil {
 			klog.Error(err)
 		}
 		if err := srv.Shutdown(ctx); err != nil {
 			klog.Error(err)
 		}
 	}, nil
-}
-
-type Server struct {
-	*generic.Server
-	*config.Config
 }

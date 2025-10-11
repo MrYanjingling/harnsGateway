@@ -8,7 +8,8 @@ import (
 type AccessMode int8
 
 const (
-	AccessModeReadOnly AccessMode = iota
+	AccessNone AccessMode = iota
+	AccessModeReadOnly
 	AccessModeReadWrite
 )
 

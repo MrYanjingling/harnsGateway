@@ -14,6 +14,7 @@ func InstallHandler(group *gin.RouterGroup, mgr *Manager) {
 func importTagNames(mgr *Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		file, err1 := c.FormFile("file")
+
 		if err1 != nil {
 			c.JSON(http.StatusBadRequest, response.NewMultiError(response.ErrMalformedJSON))
 		}

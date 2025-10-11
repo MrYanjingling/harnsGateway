@@ -1,27 +1,27 @@
 package options
 
 import (
+	"context"
 	"fmt"
+	"github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/go-sql-driver/mysql"
 	flag "github.com/spf13/pflag"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-	"harnsgateway/cmd/cim/config"
-	"harnsgateway/pkg/cim"
+	"harnsgateway/cmd/clickhouse/config"
+	"harnsgateway/pkg/ck"
 	baseoptions "harnsgateway/pkg/generic/options"
 	"k8s.io/klog/v2"
 	"time"
 )
 
 const (
-	_defaultCimDBUrl      = "10.121.47.11:9030"
-	_defaultCimDBUsername = "ems"
-	_defaultCimDBPassword = "Tm20@2024ems"
-	_defaultEmsDBUrl      = "10.122.70.36:8406"
-	_defaultEmsDBUsername = "root"
-	_defaultEmsDBPassword = "i+aSroC6ak"
-	_defaultWait          = time.Second * 15
-	_defaultPort          = "32200"
+	// _defaultCimDBUrl      = "10.121.47.11:9030"
+	// _defaultCimDBUsername = "ems"
+	// _defaultCimDBPassword = "Tm20@2024ems"
+	// _defaultEmsDBUrl      = "10.122.70.36:8406"
+	// _defaultEmsDBUsername = "root"
+	// _defaultEmsDBPassword = "i+aSroC6ak"
+	_defaultWait = time.Second * 15
+	_defaultPort = "9919"
 )
 
 var defaultCimDsn = "%s:%s@tcp(%s)/bdw_prod?charset=utf8mb4&parseTime=True&loc=Local"
@@ -41,15 +41,15 @@ type Options struct {
 
 func NewDefaultOptions() *Options {
 	return &Options{
-		CimDBUrl:      _defaultCimDBUrl,
-		CimDBUsername: _defaultCimDBUsername,
-		CimDBPassword: _defaultCimDBPassword,
-		EmsDBUrl:      _defaultEmsDBUrl,
-		EmsDBUsername: _defaultEmsDBUsername,
-		EmsDBPassword: _defaultEmsDBPassword,
-		Wait:          _defaultWait,
-		Port:          _defaultPort,
-		BaseOptions:   baseoptions.NewDefaultBaseOptions(),
+		// CimDBUrl:      _defaultCimDBUrl,
+		// CimDBUsername: _defaultCimDBUsername,
+		// CimDBPassword: _defaultCimDBPassword,
+		// EmsDBUrl:      _defaultEmsDBUrl,
+		// EmsDBUsername: _defaultEmsDBUsername,
+		// EmsDBPassword: _defaultEmsDBPassword,
+		Wait:        _defaultWait,
+		Port:        _defaultPort,
+		BaseOptions: baseoptions.NewDefaultBaseOptions(),
 	}
 }
 
@@ -64,32 +64,44 @@ func (o *Options) AddFlags(fs *flag.FlagSet) {
 }
 
 func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
-	gc := &gorm.Config{
-		CreateBatchSize: 5000,
-	}
+	conn, err := clickhouse.Open(&clickhouse.Options{
+		Addr: []string{"10.56.223.15:8689"},
+		Auth: clickhouse.Auth{
+			Database: "default",
+			Username: "default",
+			Password: "Di@clickHouse#456789",
+		},
+		ClientInfo: clickhouse.ClientInfo{
+			Products: []struct {
+				Name    string
+				Version string
+			}{
+				{Name: "an-example-go-client", Version: "0.1"},
+			},
+		},
 
-	cimUrl := fmt.Sprintf(defaultCimDsn, o.CimDBUsername, o.CimDBPassword, o.CimDBUrl)
+		Debugf: func(format string, v ...interface{}) {
+			fmt.Printf(format, v)
+		},
+	})
 
-	cimDb, err := gorm.Open(mysql.Open(cimUrl), gc)
 	if err != nil {
-		klog.V(1).InfoS("Failed to connect CIM database", "err", err)
 		return nil, err
 	}
 
-	emsUrl := fmt.Sprintf(defaultEmsDsn, o.EmsDBUsername, o.EmsDBPassword, o.EmsDBUrl)
-
-	emsDb, err := gorm.Open(mysql.Open(emsUrl), gc)
-	if err != nil {
-		klog.V(1).InfoS("Failed to connect EMS database", "err", err)
+	if err := conn.Ping(context.Background()); err != nil {
+		if exception, ok := err.(*clickhouse.Exception); ok {
+			klog.V(2).InfoS("Failed to connect clickhouse", "errCode", exception.Code, "errMsg", exception.Message)
+		}
 		return nil, err
 	}
 
-	manager := cim.NewManager(cimDb, emsDb, stopCh)
+	manager := ck.NewManager(conn, stopCh)
 
 	manager.Init()
 
 	c := &config.Config{
-		CimMgr: manager,
+		CkMgr: manager,
 	}
 
 	return c, nil

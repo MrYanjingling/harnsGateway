@@ -245,7 +245,7 @@ func (df *ModBusDataFrame) ParseVariableValue(data []byte) []*Variable {
 					v = binutil.ParseFloat32LittleEndian(vpData)
 				}
 				if vp.Variable.Rate != 0 && vp.Variable.Rate != 1 {
-					value = float32((v.(float64)) * vp.Variable.Rate)
+					value = v.(float32) * float32(vp.Variable.Rate)
 				} else {
 					value = v
 				}
