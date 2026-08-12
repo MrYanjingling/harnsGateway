@@ -4,8 +4,10 @@ go 1.20
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.3
+	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/evanphx/json-patch v5.6.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/google/uuid v1.3.0
 	github.com/gopcua/opcua v0.5.1
 	github.com/mitchellh/mapstructure v1.4.1

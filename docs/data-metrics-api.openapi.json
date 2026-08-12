@@ -1,0 +1,642 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "数据服务 API",
+    "description": "数据服务 API 接口文档，包含统计指标、KPI、测点及测点时序数据查询接口。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发环境"
+    }
+  ],
+  "tags": [
+    { "name": "统计指标", "description": "统计指标查询与列表" },
+    { "name": "KPI", "description": "KPI 查询与列表" },
+    { "name": "测点", "description": "测点列表与时序数据查询" }
+  ],
+  "paths": {
+    "/api/v1/metricsData": {
+      "post": {
+        "tags": ["统计指标"],
+        "summary": "批量查询统计指标聚合值",
+        "description": "通过 metricsCodes 批量查询统计指标在指定时间范围内的汇总值（sum 聚合），支持跨月 ES 索引查询。",
+        "operationId": "queryMetricsData",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MetricsQueryRequest" },
+              "example": {
+                "metricsCodes": ["energy_total", "power_factor"],
+                "startTime": "2026-07-01 00:00:00",
+                "endTime": "2026-07-02 00:00:00",
+                "granularity": "h"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功响应，data 为 MetricsDataItem 数组，保持入参顺序",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MetricsDataResponse" },
+                "example": {
+                  "data": [
+                    {
+                      "metricsCode": "energy_total",
+                      "startTime": "2026-07-01 00:00:00",
+                      "endTime": "2026-07-23 23:59:59",
+                      "value": 15420.50
+                    },
+                    {
+                      "metricsCode": "power_factor",
+                      "startTime": "2026-07-01 00:00:00",
+                      "endTime": "2026-07-23 23:59:59",
+                      "value": 0.92
+                    }
+                  ],
+                  "total": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "examples": {
+                  "invalidTime": {
+                    "value": { "data": "invalid startTime, expected format: 2006-01-02 15:04:05" }
+                  },
+                  "invalidRequest": {
+                    "value": { "data": "invalid request: Key: 'MetricsQueryRequest.metricsCodes' Error:Field validation for 'metricsCodes' failed on the 'required' tag" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务异常",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "data": "failed to query metrics" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metrics": {
+      "get": {
+        "tags": ["统计指标"],
+        "summary": "查询所有统计指标",
+        "description": "查询所有统计指标列表，返回 ems_statistics_metrics 表全量数据。",
+        "operationId": "listMetrics",
+        "responses": {
+          "200": {
+            "description": "成功响应，data 为 MetricsInfo 数组，total 为总条数",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MetricsListResponse" },
+                "example": {
+                  "data": [
+                    {
+                      "id": "abc123",
+                      "tenantId": "tenant-01",
+                      "revision": 3,
+                      "createdBy": "admin",
+                      "createdTime": "2026-01-01T10:00:00Z",
+                      "updatedBy": "admin",
+                      "updatedTime": "2026-07-01T15:30:00Z",
+                      "dataPoint": "meter.power",
+                      "metricsCode": "energy_total",
+                      "metricsName": "总能耗",
+                      "measureType": "kWh",
+                      "enable": true,
+                      "metricsType": "A",
+                      "calculateType": "sum",
+                      "note": "全厂总能耗指标"
+                    }
+                  ],
+                  "total": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务异常",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "data": "failed to list metrics" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kpi": {
+      "post": {
+        "tags": ["KPI"],
+        "summary": "批量查询 KPI 聚合值",
+        "description": "通过 KPI ID 批量查询 KPI 在指定时间范围内的汇总值（sum 聚合）。",
+        "operationId": "queryKpi",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/KpiQueryRequest" },
+              "example": {
+                "ids": ["kpi_001", "kpi_002"],
+                "startTime": "2026-07-01 00:00:00",
+                "endTime": "2026-07-31 23:59:59",
+                "granularity": "h"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功响应，data 为 KpiDataItem 数组，保持入参顺序",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/KpiDataResponse" },
+                "example": {
+                  "data": [
+                    {
+                      "id": "kpi_001",
+                      "startTime": "2026-07-01 00:00:00",
+                      "endTime": "2026-07-31 23:59:59",
+                      "value": 3200.80
+                    }
+                  ],
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "data": "invalid request: Key: 'KpiQueryRequest.Ids' Error:Field validation for 'Ids' failed on the 'required' tag" }
+              }
+            }
+          },
+          "500": {
+            "description": "服务异常",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "data": "failed to query kpi" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kpis": {
+      "get": {
+        "tags": ["KPI"],
+        "summary": "查询所有 KPI",
+        "description": "查询所有 KPI 列表，返回 ems_kpi 表全量数据。",
+        "operationId": "listKpis",
+        "responses": {
+          "200": {
+            "description": "成功响应，data 为 KpiInfo 数组",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/KpiListResponse" },
+                "example": {
+                  "data": [
+                    {
+                      "id": "kpi_001",
+                      "tenantId": "tenant-01",
+                      "name": "日总能耗",
+                      "formula": "tag1+tag2",
+                      "formulaOri": "A+B",
+                      "timeGranularity": "d",
+                      "singleQuota": true,
+                      "defaultTag": false,
+                      "canDelete": true,
+                      "unit": "kWh",
+                      "targetDataType": "number",
+                      "status": "active"
+                    }
+                  ],
+                  "total": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务异常",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "data": "failed to list kpis" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tags": {
+      "get": {
+        "tags": ["测点"],
+        "summary": "查询所有测点",
+        "description": "查询所有测点列表，返回 ems_tag 表全量数据。",
+        "operationId": "listTags",
+        "responses": {
+          "200": {
+            "description": "成功响应，data 为 TagInfo 数组",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TagListResponse" },
+                "example": {
+                  "data": [
+                    {
+                      "id": "tag_001",
+                      "tagId": "SCADA.temperature",
+                      "tagName": "温度测点",
+                      "tagDesc": "1号机组温度",
+                      "enable": 1,
+                      "scadaId": "scada-01",
+                      "tagType": "analog"
+                    }
+                  ],
+                  "total": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务异常",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "data": "failed to list tags" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tagTimeSeries": {
+      "post": {
+        "tags": ["测点"],
+        "summary": "查询测点时序数据",
+        "description": "查询测点时序数据，代理转发至第三方 SCADA 接口 POST /di/scada/v1/portal/timeSeries。最多支持 10 个测点同时查询。",
+        "operationId": "queryTagTimeSeries",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TagTimeSeriesRequest" },
+              "examples": {
+                "timeSeries": {
+                  "value": {
+                    "select": "SCADA.temp1,SCADA.power1",
+                    "start": "2026-08-01 00:00:00.000",
+                    "end": "2026-08-09 23:59:59.999",
+                    "latest": false,
+                    "limit": 100,
+                    "mode": "raw"
+                  }
+                },
+                "latest": {
+                  "value": {
+                    "select": "SCADA.temp1",
+                    "latest": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功响应，data 为 DataPointTimeSeries 数组",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TagTimeSeriesResponse" },
+                "example": {
+                  "data": [
+                    {
+                      "tagId": "SCADA.temp1",
+                      "tagName": "温度测点1",
+                      "tagDesc": "1号机组温度",
+                      "data": [
+                        { "time": "2026-08-01 00:00:00", "value": "25.5" },
+                        { "time": "2026-08-01 01:00:00", "value": "26.1" }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "data": "invalid request: Key: 'TagTimeSeriesRequest.Select' Error:Field validation for 'Select' failed on the 'required' tag" }
+              }
+            }
+          },
+          "500": {
+            "description": "第三方接口返回非 200 或服务异常",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "examples": {
+                  "thirdParty": {
+                    "value": { "data": "<第三方接口的 message>" }
+                  },
+                  "serverError": {
+                    "value": { "data": "failed to query tag time series" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MetricsQueryRequest": {
+        "type": "object",
+        "required": ["metricsCodes", "startTime", "endTime", "granularity"],
+        "properties": {
+          "metricsCodes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "统计指标编码列表（非空数组）",
+            "minItems": 1,
+            "example": ["energy_total", "power_factor"]
+          },
+          "startTime": {
+            "type": "string",
+            "description": "查询起始时间，格式 yyyy-MM-dd HH:mm:ss",
+            "example": "2026-07-01 00:00:00"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "查询结束时间，格式 yyyy-MM-dd HH:mm:ss",
+            "example": "2026-07-02 00:00:00"
+          },
+          "granularity": {
+            "type": "string",
+            "description": "时间粒度，仅支持 h",
+            "enum": ["h"],
+            "example": "h"
+          }
+        }
+      },
+      "MetricsDataItem": {
+        "type": "object",
+        "properties": {
+          "metricsCode": { "type": "string", "description": "统计指标编码" },
+          "startTime": { "type": "string", "description": "查询起始时间" },
+          "endTime": { "type": "string", "description": "查询结束时间" },
+          "value": { "type": "number", "description": "s_data 的 sum 聚合值" }
+        }
+      },
+      "MetricsDataResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MetricsDataItem" }
+          },
+          "total": { "type": "number", "description": "列表接口返回总条数" }
+        }
+      },
+      "KpiQueryRequest": {
+        "type": "object",
+        "required": ["ids", "startTime", "endTime", "granularity"],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "KPI ID 列表（非空数组）",
+            "minItems": 1,
+            "example": ["kpi_001", "kpi_002"]
+          },
+          "startTime": {
+            "type": "string",
+            "description": "查询起始时间，格式 yyyy-MM-dd HH:mm:ss",
+            "example": "2026-07-01 00:00:00"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "查询结束时间，格式 yyyy-MM-dd HH:mm:ss",
+            "example": "2026-07-31 23:59:59"
+          },
+          "granularity": {
+            "type": "string",
+            "description": "时间粒度，仅支持 h",
+            "enum": ["h"],
+            "example": "h"
+          }
+        }
+      },
+      "KpiDataItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "KPI ID" },
+          "startTime": { "type": "string", "description": "查询起始时间" },
+          "endTime": { "type": "string", "description": "查询结束时间" },
+          "value": { "type": "number", "description": "s_data 的 sum 聚合值" }
+        }
+      },
+      "KpiDataResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/KpiDataItem" }
+          },
+          "total": { "type": "number" }
+        }
+      },
+      "MetricsInfo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "主键 ID" },
+          "tenantId": { "type": "string", "nullable": true, "description": "租户号" },
+          "revision": { "type": "number", "nullable": true, "description": "乐观锁版本" },
+          "createdBy": { "type": "string", "nullable": true, "description": "创建人" },
+          "createdTime": { "type": "string", "nullable": true, "description": "创建时间" },
+          "updatedBy": { "type": "string", "nullable": true, "description": "更新人" },
+          "updatedTime": { "type": "string", "nullable": true, "description": "更新时间" },
+          "dataPoint": { "type": "string", "nullable": true, "description": "测点名称" },
+          "metricsCode": { "type": "string", "nullable": true, "description": "统计指标编码" },
+          "metricsName": { "type": "string", "nullable": true, "description": "统计指标名称" },
+          "measureType": { "type": "string", "nullable": true, "description": "计量单位 ID" },
+          "enable": { "type": "boolean", "nullable": true, "description": "是否启用" },
+          "metricsType": { "type": "string", "nullable": true, "description": "M=手动表, A=自动表" },
+          "calculateType": { "type": "string", "nullable": true, "description": "聚合类型: sum/avg/max/min" },
+          "note": { "type": "string", "nullable": true, "description": "备注" }
+        }
+      },
+      "MetricsListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MetricsInfo" }
+          },
+          "total": { "type": "number" }
+        }
+      },
+      "KpiInfo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "KPI ID" },
+          "name": { "type": "string", "description": "KPI 名称" },
+          "formula": { "type": "string", "nullable": true, "description": "解析后的公式内容" },
+          "formulaDataName": { "type": "string", "nullable": true, "description": "公式涉及数据对象名称" },
+          "formulaOri": { "type": "string", "description": "原始公式内容" },
+          "timeGranularity": { "type": "string", "description": "时间粒度: h/d/m" },
+          "targetData": { "type": "string", "nullable": true, "description": "目标值" },
+          "singleQuota": { "type": "boolean", "description": "是否单一 KPI" },
+          "defaultTag": { "type": "boolean", "description": "是否出厂默认" },
+          "canDelete": { "type": "boolean", "description": "是否能删除" },
+          "unit": { "type": "string", "nullable": true, "description": "单位" },
+          "targetDataType": { "type": "string", "description": "目标值特性" },
+          "status": { "type": "string", "description": "状态" },
+          "tenantId": { "type": "string", "nullable": true, "description": "租户号" },
+          "revision": { "type": "number", "nullable": true, "description": "乐观锁版本" },
+          "createdBy": { "type": "string", "nullable": true, "description": "创建人" },
+          "createdTime": { "type": "string", "nullable": true, "description": "创建时间" },
+          "updatedBy": { "type": "string", "nullable": true, "description": "更新人" },
+          "updatedTime": { "type": "string", "nullable": true, "description": "更新时间" }
+        }
+      },
+      "KpiListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/KpiInfo" }
+          },
+          "total": { "type": "number" }
+        }
+      },
+      "TagInfo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "主键 ID" },
+          "tenantId": { "type": "string", "nullable": true, "description": "租户号" },
+          "revision": { "type": "number", "nullable": true, "description": "乐观锁版本" },
+          "createdBy": { "type": "string", "nullable": true, "description": "创建人" },
+          "createdTime": { "type": "string", "nullable": true, "description": "创建时间" },
+          "updatedBy": { "type": "string", "nullable": true, "description": "更新人" },
+          "updatedTime": { "type": "string", "nullable": true, "description": "更新时间" },
+          "tagId": { "type": "string", "nullable": true, "description": "测点 ID" },
+          "tagName": { "type": "string", "nullable": true, "description": "测点名称" },
+          "tagDesc": { "type": "string", "nullable": true, "description": "测点描述" },
+          "lastSynTime": { "type": "string", "nullable": true, "description": "最近同步时间" },
+          "tagType": { "type": "string", "nullable": true, "description": "测点类型" },
+          "tagAttribute": { "type": "string", "nullable": true, "description": "测点属性" },
+          "enable": { "type": "number", "nullable": true, "description": "启用状态: 1=启用, 0=禁用" },
+          "scadaId": { "type": "string", "description": "所属 SCADA" },
+          "operator": { "type": "string", "nullable": true, "description": "运算符" },
+          "operateValue": { "type": "string", "nullable": true, "description": "运算值" }
+        }
+      },
+      "TagListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TagInfo" }
+          },
+          "total": { "type": "number" }
+        }
+      },
+      "TagTimeSeriesRequest": {
+        "type": "object",
+        "required": ["select"],
+        "properties": {
+          "select": {
+            "type": "string",
+            "description": "测点 ID，单个如 tag1，多个逗号分隔如 tag1,tag2",
+            "example": "SCADA.temp1,SCADA.power1"
+          },
+          "start": {
+            "type": "string",
+            "description": "起始时间，格式 yyyy-MM-dd HH:mm:ss.SSS",
+            "example": "2026-08-01 00:00:00.000"
+          },
+          "end": {
+            "type": "string",
+            "description": "结束时间，格式 yyyy-MM-dd HH:mm:ss.SSS",
+            "example": "2026-08-09 23:59:59.999"
+          },
+          "latest": {
+            "type": "boolean",
+            "description": "是否查询最新值，默认 false",
+            "default": false
+          },
+          "limit": {
+            "type": "number",
+            "description": "返回数据条数",
+            "example": 100
+          },
+          "mode": {
+            "type": "string",
+            "description": "值类型：raw(默认)/mean(平均值)/usage(差值)",
+            "enum": ["raw", "mean", "usage"],
+            "default": "raw"
+          }
+        }
+      },
+      "TimeSeriesTO": {
+        "type": "object",
+        "properties": {
+          "time": { "type": "string", "description": "数据时间戳" },
+          "value": { "type": "string", "description": "数据值" }
+        }
+      },
+      "DataPointTimeSeries": {
+        "type": "object",
+        "properties": {
+          "tagId": { "type": "string", "description": "测点 ID" },
+          "tagName": { "type": "string", "description": "测点名称" },
+          "tagDesc": { "type": "string", "description": "测点描述" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TimeSeriesTO" },
+            "description": "时序数据点数组"
+          }
+        }
+      },
+      "TagTimeSeriesResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DataPointTimeSeries" }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "string", "description": "错误信息" }
+        }
+      }
+    }
+  }
+}
