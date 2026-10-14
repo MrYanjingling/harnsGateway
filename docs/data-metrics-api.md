@@ -507,14 +507,14 @@ ES 索引按月分片，查询跨月时自动拼接多个索引名。
 
 ### 接口总览
 
-| 方法 | 路径 | 说明 | 数据源 |
-|------|------|------|--------|
-| POST | `/api/v1/metricsData` | 批量查询指标聚合值 | MySQL + ES |
-| GET | `/api/v1/metrics` | 查询所有统计指标 | MySQL |
-| POST | `/api/v1/kpi` | 批量查询 KPI 聚合值 | MySQL + ES |
-| GET | `/api/v1/kpis` | 查询所有 KPI | MySQL |
-| GET | `/api/v1/tags` | 查询所有测点 | MySQL |
-| POST | `/api/v1/tagTimeSeries` | 查询测点时序数据 | 第三方 SCADA |
+| 方法 | 路径                           | 说明 | 数据源 |
+|------|------------------------------|------|--------|
+| POST | `/api/v1/metricsData`        | 批量查询指标聚合值 | MySQL + ES |
+| GET | `/api/v1/metrics`            | 查询所有统计指标 | MySQL |
+| POST | `/api/v1/kpi`                | 批量查询 KPI 聚合值 | MySQL + ES |
+| GET | `/api/v1/kpis`               | 查询所有 KPI | MySQL |
+| GET | `/api/v1/tags`               | 查询所有测点 | MySQL |
+| POST | `/api/v1/fmcs/tagTimeSeries` | 查询测点时序数据 | 第三方 SCADA |
 
 
 

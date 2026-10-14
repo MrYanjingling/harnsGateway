@@ -288,7 +288,7 @@
         }
       }
     },
-    "/api/v1/tagTimeSeries": {
+    "/api/v1//fmcs/tagTimeSeries": {
       "post": {
         "tags": ["测点"],
         "summary": "查询测点时序数据",
