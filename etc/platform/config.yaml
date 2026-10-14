@@ -1,0 +1,58 @@
+# harns-platform configuration file.
+#
+# Place this file at /etc/platform/config.yaml (the default path loaded on startup),
+# or point to it explicitly with:  ./platform -c /etc/platform/config.yaml
+#
+# Command-line flags always override values defined here.
+
+# HTTP/HTTPS port exposed by the platform service.
+port: "32300"
+
+# The duration the server gracefully waits for existing connections to finish
+# before shutting down (e.g. 15s, 1m).
+graceful-timeout: 15s
+
+# TLS certificates. Leave both empty to serve plain HTTP.
+cert-file: ""
+key-file: ""
+
+# Redis connection.
+redis:
+  addrs:
+    - 127.0.0.1:6379
+  username: ""
+  password: ""
+  db: 0
+
+# MySQL connection.
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  username: root
+  password: ""
+  database: harns
+  charset: utf8mb4
+
+# MinIO object storage connection.
+minio:
+  endpoint: 127.0.0.1:9000
+  access-key: ""
+  secret-key: ""
+  use-ssl: false
+  bucket: harns
+
+# Logging configuration.
+logging:
+  # Log format: "text" or "json".
+  format: json
+  # Verbosity threshold for V(level) logs.
+  verbosity: 2
+  # Destination: "stderr", "stdout" or a file path.
+  # Leave empty to write to <binary dir>/../log/<service>.log.
+  output: "../log/harns-platform.log"
+  # Log rotation (only applies when logging to a file).
+  max-size: 100     # maximum size in MB of a log file before rotation
+  max-backups: 7    # number of old log files to retain (0 = keep all)
+  max-age: 7        # days to retain old log files (0 = keep forever)
+  compress: true    # gzip rotated files
+  local-time: true  # use local time in rotated file names
