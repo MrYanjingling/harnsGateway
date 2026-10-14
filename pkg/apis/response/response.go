@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/MrYanjingling/harns-platform/pkg/i18n"
+	"harns-platform/pkg/i18n"
 )
 
 type responseError struct {

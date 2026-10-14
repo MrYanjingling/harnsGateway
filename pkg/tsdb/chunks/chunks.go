@@ -28,9 +28,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/MrYanjingling/harns-platform/pkg/tsdb/chunkenc"
-	tsdb_errors "github.com/MrYanjingling/harns-platform/pkg/tsdb/errors"
-	"github.com/MrYanjingling/harns-platform/pkg/tsdb/fileutil"
+	"harns-platform/pkg/tsdb/chunkenc"
+	tsdb_errors "harns-platform/pkg/tsdb/errors"
+	"harns-platform/pkg/tsdb/fileutil"
 )
 
 // Segment header fields constants.

@@ -3,8 +3,8 @@ package response
 import (
 	"net/http"
 
-	"github.com/MrYanjingling/harns-platform/pkg/i18n"
 	"github.com/gin-gonic/gin"
+	"harns-platform/pkg/i18n"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"harns-platform/pkg/logging"
 )
 
 // LoggingConfiguration configures the shared structured logger.

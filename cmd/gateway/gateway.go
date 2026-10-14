@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/MrYanjingling/harns-platform/cmd/gateway/app"
-	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"harns-platform/cmd/gateway/app"
+	"harns-platform/pkg/logging"
 	"os"
 )
 

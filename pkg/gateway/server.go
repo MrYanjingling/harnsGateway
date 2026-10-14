@@ -3,9 +3,9 @@ package gateway
 import (
 	"fmt"
 
-	"github.com/MrYanjingling/harns-platform/pkg/apis"
-	"github.com/MrYanjingling/harns-platform/pkg/apis/response"
 	"github.com/gin-gonic/gin"
+	"harns-platform/pkg/apis"
+	"harns-platform/pkg/apis/response"
 	"net/http"
 )
 

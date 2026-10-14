@@ -5,7 +5,7 @@ set -o nounset
 set -o pipefail
 
 
-readonly HARNSGATEWAY_GO_PACKAGE=github.com/MrYanjingling/harns-platform
+readonly HARNSGATEWAY_GO_PACKAGE=harns-platform
 readonly HARNSGATEWAY_GOPATH="${HARNSGATEWAY_OUTPUT}/go"
 
 harnsgateway::check::env() {

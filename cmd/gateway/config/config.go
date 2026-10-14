@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/MrYanjingling/harns-platform/pkg/device"
-	"github.com/MrYanjingling/harns-platform/pkg/gateway"
+	"harns-platform/pkg/gateway"
+	"harns-platform/pkg/gateway/device"
 )
 
 type Config struct {

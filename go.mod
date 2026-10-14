@@ -1,4 +1,4 @@
-module github.com/MrYanjingling/harns-platform
+module harns-platform
 
 go 1.21
 

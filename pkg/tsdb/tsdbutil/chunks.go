@@ -14,8 +14,8 @@
 package tsdbutil
 
 import (
-	"github.com/MrYanjingling/harns-platform/pkg/tsdb/chunkenc"
-	"github.com/MrYanjingling/harns-platform/pkg/tsdb/chunks"
+	"harns-platform/pkg/tsdb/chunkenc"
+	"harns-platform/pkg/tsdb/chunks"
 )
 
 type Samples interface {

@@ -4,7 +4,7 @@
 package fileutil
 
 import (
-	"github.com/MrYanjingling/harns-platform/pkg/tsdb/fileutil"
+	"harns-platform/pkg/tsdb/fileutil"
 	"os"
 	"syscall"
 )

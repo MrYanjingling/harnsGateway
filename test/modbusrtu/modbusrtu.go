@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
-	"github.com/MrYanjingling/harns-platform/pkg/utils/crcutil"
+	"harns-platform/pkg/utils/binutil"
+	"harns-platform/pkg/utils/crcutil"
 )
 
 func main() {

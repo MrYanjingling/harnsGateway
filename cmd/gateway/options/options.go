@@ -2,15 +2,15 @@ package options
 
 import (
 	"fmt"
-	"github.com/MrYanjingling/harns-platform/cmd/gateway/config"
-	"github.com/MrYanjingling/harns-platform/pkg/device"
-	"github.com/MrYanjingling/harns-platform/pkg/gateway"
-	"github.com/MrYanjingling/harns-platform/pkg/generic"
-	baseoptions "github.com/MrYanjingling/harns-platform/pkg/generic/options"
-	"github.com/MrYanjingling/harns-platform/pkg/logging"
-	"github.com/MrYanjingling/harns-platform/pkg/storage"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/spf13/pflag"
+	"harns-platform/cmd/gateway/config"
+	"harns-platform/pkg/gateway"
+	"harns-platform/pkg/gateway/device"
+	"harns-platform/pkg/gateway/registry"
+	"harns-platform/pkg/gateway/storage"
+	baseoptions "harns-platform/pkg/generic/options"
+	"harns-platform/pkg/logging"
 	"time"
 )
 
@@ -72,7 +72,7 @@ func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
 	c.GatewayMgr = gatewayMgr
 
 	gatewayMeta, _ := gatewayMgr.GetGatewayMeta()
-	store, _ := generic.NewStore(storage.StoreGroupToString[storage.StoreGroupDevice], storage.Devices, generic.DeviceTypeObjectMap)
+	store, _ := device.NewStore(storage.StoreGroupToString[storage.StoreGroupDevice], storage.Devices, registry.DeviceTypeObjectMap)
 	// mqtt
 	mqttOption := mqtt.NewClientOptions()
 	for _, s := range o.MqttBrokerUrls {

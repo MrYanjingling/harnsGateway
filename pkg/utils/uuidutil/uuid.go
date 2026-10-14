@@ -15,7 +15,7 @@ func UUID() string {
 }
 
 // ShortUUID refer to https://stackoverflow.com/questions/37934162/output-uuid-in-go-as-a-short-string
-func ShortUUID() string{
+func ShortUUID() string {
 	id := uuid.New()
 	return escaper.Replace(base64.RawURLEncoding.EncodeToString(id[:]))
 }
