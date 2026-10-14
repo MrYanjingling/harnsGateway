@@ -1,0 +1,20 @@
+# English (United States) translations.
+# Keys are semantic message IDs. %s / %d are printf-style placeholders.
+
+error.malformed_json: "The JSON you provided was not well-formed or did not validate against our published format."
+error.request_body: "Request body error"
+error.resource_exists: "Variable [%s] already exists."
+error.resource_not_found: "Variable [%s] not found."
+error.legal_action_not_found: "Legal action not found."
+error.boolean_invalid: "Boolean value [%s] is invalid."
+error.integer16_invalid: "Integer16 value [%s] is invalid."
+error.integer32_invalid: "Integer32 value [%s] is invalid."
+error.integer64_invalid: "Integer64 value [%s] is invalid."
+error.float32_invalid: "Float32 value [%s] is invalid."
+error.float64_invalid: "Float64 value [%s] is invalid."
+error.device_not_found: "Device [%s] not found."
+error.variable_not_writable: "Variable [%s] not writable."
+error.device_not_connect: "Device [%s] not connect."
+error.device_operator_unsupported: "Device operator [%s] not supported."
+error.too_many_json_patch_operations: "Json Patch operations exceeds %d."
+error.internal: "Internal server error."

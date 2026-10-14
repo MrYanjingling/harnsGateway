@@ -1,32 +1,41 @@
 package response
 
-var errors = map[ErrCode]string{
-	ErrCodeMalformedJSON:              "The JSON you provided was not well-formed or did not validate against our published format.",
-	ErrCodeRequestBody:                "Request body error",
-	ErrCodeLegalActionNotFound:        "Legal action not found.",
-	ErrCodeDeviceNotFound:             "Device [%s] not found.",
-	ErrCodeResourceExists:             "Variable [%s] already exists.",
-	ErrCodeResourceNotFound:           "Variable [%s] not found.",
-	ErrCodeVariableNotWritable:        "Variable [%s] not writable.",
-	ErrCodeDeviceNotConnect:           "Device [%s] not connect.",
-	ErrCodeDeviceOperatorUnSupported:  "Device operator [%s] not supported.",
-	ErrCodeTooManyJsonPatchOperations: "Json Patch operations exceeds %d.",
+import "strconv"
+
+// messageIDs maps every error code to its i18n message ID. The actual message
+// templates live in pkg/i18n/locales/*.yaml, keyed by these IDs.
+var messageIDs = map[ErrCode]string{
+	ErrCodeMalformedJSON:              "error.malformed_json",
+	ErrCodeRequestBody:                "error.request_body",
+	ErrCodeResourceExists:             "error.resource_exists",
+	ErrCodeResourceNotFound:           "error.resource_not_found",
+	ErrCodeLegalActionNotFound:        "error.legal_action_not_found",
+	ErrCodeBooleanInvalid:             "error.boolean_invalid",
+	ErrCodeInteger16Invalid:           "error.integer16_invalid",
+	ErrCodeInteger32Invalid:           "error.integer32_invalid",
+	ErrCodeInteger64Invalid:           "error.integer64_invalid",
+	ErrCodeFloat32Invalid:             "error.float32_invalid",
+	ErrCodeFloat64Invalid:             "error.float64_invalid",
+	ErrCodeDeviceNotFound:             "error.device_not_found",
+	ErrCodeVariableNotWritable:        "error.variable_not_writable",
+	ErrCodeDeviceNotConnect:           "error.device_not_connect",
+	ErrCodeDeviceOperatorUnSupported:  "error.device_operator_unsupported",
+	ErrCodeTooManyJsonPatchOperations: "error.too_many_json_patch_operations",
+	ErrCodeInternal:                   "error.internal",
+}
+
+func messageID(code ErrCode) string {
+	if id, ok := messageIDs[code]; ok {
+		return id
+	}
+	return strconv.Itoa(int(code))
 }
 
 // !!! IMPORTANT PLEASE READ FIRST !!!
 // You SHOULD add new code at the end of enum firstly.
 
-var ErrMalformedJSON = &responseError{
-	Code:    ErrCodeMalformedJSON,
-	Message: errors[ErrCodeMalformedJSON],
-}
-
-var ErrRequestBody = &responseError{
-	Code:    ErrCodeRequestBody,
-	Message: errors[ErrCodeRequestBody],
-}
-
-var ErrLegalActionNotFound = &responseError{
-	Code:    ErrCodeLegalActionNotFound,
-	Message: errors[ErrCodeLegalActionNotFound],
-}
+var (
+	ErrMalformedJSON       = generateError(ErrCodeMalformedJSON)
+	ErrRequestBody         = generateError(ErrCodeRequestBody)
+	ErrLegalActionNotFound = generateError(ErrCodeLegalActionNotFound)
+)

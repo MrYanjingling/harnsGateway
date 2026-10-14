@@ -13,13 +13,14 @@ const (
 	ErrCodeInteger16Invalid                   // 10007
 	ErrCodeInteger32Invalid                   // 10008
 	ErrCodeInteger64Invalid                   // 10009
-	ErrCodeFloat32Invalid                     // 10008
-	ErrCodeFloat64Invalid                     // 10009
-	ErrCodeDeviceNotFound                     // 10010
-	ErrCodeVariableNotWritable                // 10011
-	ErrCodeDeviceNotConnect                   // 10012
-	ErrCodeDeviceOperatorUnSupported          // 10013
-	ErrCodeTooManyJsonPatchOperations         // 10014
+	ErrCodeFloat32Invalid                     // 10010
+	ErrCodeFloat64Invalid                     // 10011
+	ErrCodeDeviceNotFound                     // 10012
+	ErrCodeVariableNotWritable                // 10013
+	ErrCodeDeviceNotConnect                   // 10014
+	ErrCodeDeviceOperatorUnSupported          // 10015
+	ErrCodeTooManyJsonPatchOperations         // 10016
+	ErrCodeInternal                           // 10017
 )
 
 // !!! IMPORTANT PLEASE READ FIRST !!!

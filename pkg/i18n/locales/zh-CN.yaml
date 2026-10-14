@@ -1,0 +1,20 @@
+# 简体中文翻译。
+# key 为语义化消息 ID，%s / %d 为 printf 占位符。
+
+error.malformed_json: "您提供的 JSON 格式不正确，或未通过格式校验。"
+error.request_body: "请求体错误"
+error.resource_exists: "变量 [%s] 已存在。"
+error.resource_not_found: "变量 [%s] 不存在。"
+error.legal_action_not_found: "合法的操作不存在。"
+error.boolean_invalid: "布尔值 [%s] 无效。"
+error.integer16_invalid: "16 位整型值 [%s] 无效。"
+error.integer32_invalid: "32 位整型值 [%s] 无效。"
+error.integer64_invalid: "64 位整型值 [%s] 无效。"
+error.float32_invalid: "32 位浮点值 [%s] 无效。"
+error.float64_invalid: "64 位浮点值 [%s] 无效。"
+error.device_not_found: "设备 [%s] 不存在。"
+error.variable_not_writable: "变量 [%s] 不可写。"
+error.device_not_connect: "设备 [%s] 未连接。"
+error.device_operator_unsupported: "不支持设备操作 [%s]。"
+error.too_many_json_patch_operations: "Json Patch 操作数量超过 %d。"
+error.internal: "服务器内部错误。"

@@ -2,16 +2,18 @@ package response
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/MrYanjingling/harns-platform/pkg/i18n"
 )
 
 type responseError struct {
-	Code    ErrCode `json:"code"`
-	Message string  `json:"message"`
-	Err     error   `json:"-"`
+	Code    ErrCode       `json:"code"`
+	Message string        `json:"message"`
+	Err     error         `json:"-"`
+	args    []interface{} `json:"-"`
 }
 
 func (re *responseError) Error() string {
@@ -34,6 +36,20 @@ func (re *responseError) GetCode() ErrCode {
 
 func (re *responseError) Unwrap() error {
 	return re.Err
+}
+
+// Localized returns a copy of the error whose message is translated into lang.
+// It keeps the original arguments so the reported code stays the same.
+func (re *responseError) Localized(lang string) *responseError {
+	if re == nil {
+		return nil
+	}
+	return &responseError{
+		Code:    re.Code,
+		Message: i18n.Translate(lang, messageID(re.Code), re.args...),
+		Err:     re.Err,
+		args:    re.args,
+	}
 }
 
 func IsResponseError(err error) bool {
@@ -117,16 +133,20 @@ func (e *MultiError) Error() string {
 func generateError(code ErrCode, s ...interface{}) *responseError {
 	return &responseError{
 		Code:    code,
-		Message: fmt.Sprintf(errors[code], s...),
+		Message: defaultMessage(code, s...),
+		args:    s,
 	}
 }
 
 func generateErrorWrapper(code ErrCode, err error, s ...interface{}) *responseError {
-	return &responseError{
-		Code:    code,
-		Message: fmt.Sprintf(errors[code], s...),
-		Err:     err,
-	}
+	re := generateError(code, s...)
+	re.Err = err
+	return re
+}
+
+// defaultMessage formats the message of code in the default language.
+func defaultMessage(code ErrCode, s ...interface{}) string {
+	return i18n.Translate(i18n.DefaultLang(), messageID(code), s...)
 }
 
 // https://golang.org/doc/faq#convert_slice_of_interface
@@ -156,6 +176,11 @@ func ErrDeviceOperatorUnSupported(operator string) *responseError {
 
 func ErrTooManyJsonPatchOperations(max int) *responseError {
 	return generateError(ErrCodeTooManyJsonPatchOperations, max)
+}
+
+// ErrInternal wraps an unexpected internal error with a generic code.
+func ErrInternal(err error) *responseError {
+	return generateErrorWrapper(ErrCodeInternal, err)
 }
 
 func ErrBooleanInvalid(infos ...string) *responseError {

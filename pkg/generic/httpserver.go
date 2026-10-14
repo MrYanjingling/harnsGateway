@@ -1,11 +1,14 @@
 package generic
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/MrYanjingling/harns-platform/pkg/i18n"
+	"github.com/gin-gonic/gin"
+)
 
 func Default() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
-	engine.Use(logger(), gin.Recovery())
+	engine.Use(i18n.Middleware(), logger(), gin.Recovery())
 	return engine
 }
 

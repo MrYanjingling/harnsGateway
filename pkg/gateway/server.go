@@ -2,7 +2,9 @@ package gateway
 
 import (
 	"fmt"
+
 	"github.com/MrYanjingling/harns-platform/pkg/apis"
+	"github.com/MrYanjingling/harns-platform/pkg/apis/response"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -18,7 +20,7 @@ func getGatewayMeta(mgr *Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		g, _ := mgr.GetGatewayMeta()
 		c.Header(apis.ETag, fmt.Sprintf("%s", g.GetVersion()))
-		c.JSON(http.StatusOK, g)
+		response.WriteOK(c, g)
 	}
 }
 
@@ -26,10 +28,10 @@ func getGatewayCpu(mgr *Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cpu, err := mgr.getGatewayCpu()
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
+			response.WriteError(c, http.StatusInternalServerError, response.ErrInternal(err))
 			return
 		}
-		c.JSON(http.StatusOK, ResponseModel{Cpus: cpu})
+		response.WriteOK(c, ResponseModel{Cpus: cpu})
 	}
 }
 
@@ -37,10 +39,10 @@ func getGatewayMem(mgr *Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		mem, err := mgr.getGatewayMem()
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
+			response.WriteError(c, http.StatusInternalServerError, response.ErrInternal(err))
 			return
 		}
-		c.JSON(http.StatusOK, ResponseModel{Mem: mem})
+		response.WriteOK(c, ResponseModel{Mem: mem})
 	}
 }
 
@@ -48,9 +50,9 @@ func getGatewayDisk(mgr *Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		disks, err := mgr.getGatewayDisk()
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
+			response.WriteError(c, http.StatusInternalServerError, response.ErrInternal(err))
 			return
 		}
-		c.JSON(http.StatusOK, ResponseModel{Disks: disks})
+		response.WriteOK(c, ResponseModel{Disks: disks})
 	}
 }
