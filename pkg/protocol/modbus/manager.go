@@ -1,15 +1,15 @@
 package modbus
 
 import (
-	modbus "harnsgateway/pkg/protocol/modbus/runtime"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	"harnsgateway/pkg/utils/differenceutil"
-	"harnsgateway/pkg/utils/randutil"
-	"harnsgateway/pkg/utils/uuidutil"
-	v1 "harnsgateway/pkg/v1"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	modbus "github.com/MrYanjingling/harns-platform/pkg/protocol/modbus/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/differenceutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/randutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/uuidutil"
+	v1 "github.com/MrYanjingling/harns-platform/pkg/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/klog/v2"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +21,7 @@ type ModbusDeviceManager struct {
 func (m *ModbusDeviceManager) CreateDevice(deviceType v1.DeviceType) (runtime.Device, error) {
 	modbusDevice, ok := deviceType.(*v1.ModBusDevice)
 	if !ok {
-		klog.V(2).InfoS("Unsupported device,type not Modbus")
+		logging.V(2).InfoS("Unsupported device,type not Modbus")
 		return nil, constant.ErrDeviceType
 	}
 
@@ -92,7 +92,7 @@ func (m *ModbusDeviceManager) UpdateValidation(deviceType v1.DeviceType, device 
 func (m *ModbusDeviceManager) UpdateDevice(id string, deviceType v1.DeviceType, device runtime.Device) (runtime.Device, error) {
 	modbusDevice, ok := deviceType.(*v1.ModBusDevice)
 	if !ok {
-		klog.V(2).InfoS("Unsupported device,type not Modbus")
+		logging.V(2).InfoS("Unsupported device,type not Modbus")
 		return nil, constant.ErrDeviceType
 	}
 

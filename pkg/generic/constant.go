@@ -1,14 +1,14 @@
 package generic
 
 import (
-	"harnsgateway/pkg/protocol/modbus"
-	modbusallruntime "harnsgateway/pkg/protocol/modbus/runtime"
-	"harnsgateway/pkg/protocol/opcua"
-	opcuaruntime "harnsgateway/pkg/protocol/opcua/runtime"
-	"harnsgateway/pkg/protocol/s7"
-	s7runtime "harnsgateway/pkg/protocol/s7/runtime"
-	"harnsgateway/pkg/runtime"
-	v1 "harnsgateway/pkg/v1"
+	"github.com/MrYanjingling/harns-platform/pkg/protocol/modbus"
+	modbusallruntime "github.com/MrYanjingling/harns-platform/pkg/protocol/modbus/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/protocol/opcua"
+	opcuaruntime "github.com/MrYanjingling/harns-platform/pkg/protocol/opcua/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/protocol/s7"
+	s7runtime "github.com/MrYanjingling/harns-platform/pkg/protocol/s7/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	v1 "github.com/MrYanjingling/harns-platform/pkg/v1"
 )
 
 var DeviceTypeMap = map[string]func() v1.DeviceType{

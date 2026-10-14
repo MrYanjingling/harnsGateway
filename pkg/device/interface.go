@@ -1,8 +1,8 @@
 package device
 
 import (
-	"harnsgateway/pkg/runtime"
-	v1 "harnsgateway/pkg/v1"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	v1 "github.com/MrYanjingling/harns-platform/pkg/v1"
 )
 
 type DeviceManager interface {

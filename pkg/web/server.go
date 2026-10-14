@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/MrYanjingling/harns-platform/cmd/gateway/config"
+	"github.com/MrYanjingling/harns-platform/cmd/gateway/options"
+	"github.com/MrYanjingling/harns-platform/pkg/device"
+	"github.com/MrYanjingling/harns-platform/pkg/gateway"
+	"github.com/MrYanjingling/harns-platform/pkg/generic"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
 	"github.com/gin-gonic/gin"
-	"harnsgateway/cmd/gateway/config"
-	"harnsgateway/cmd/gateway/options"
-	"harnsgateway/pkg/device"
-	"harnsgateway/pkg/gateway"
-	"harnsgateway/pkg/generic"
-	"k8s.io/klog/v2"
 	"net/http"
 )
 
@@ -62,7 +62,7 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 			TLSConfig: c,
 		}
 		go func() {
-			klog.Error(srv.ListenAndServeTLS("", ""))
+			logging.Error(srv.ListenAndServeTLS("", ""))
 		}()
 	} else {
 		srv = &http.Server{
@@ -70,17 +70,17 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 			Handler: s.Router,
 		}
 		go func() {
-			klog.Error(srv.ListenAndServe())
+			logging.Error(srv.ListenAndServe())
 		}()
 	}
 
 	return func(ctx context.Context) {
 		srv.SetKeepAlivesEnabled(false)
 		if err := s.Config.DeviceMgr.Shutdown(ctx); err != nil {
-			klog.Error(err)
+			logging.Error(err)
 		}
 		if err := srv.Shutdown(ctx); err != nil {
-			klog.Error(err)
+			logging.Error(err)
 		}
 	}, nil
 }

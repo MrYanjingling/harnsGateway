@@ -2,8 +2,8 @@ package storage
 
 import (
 	"errors"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
 	"golang.org/x/sys/windows"
-	"k8s.io/klog/v2"
 	"os/user"
 	"path/filepath"
 	"syscall"
@@ -17,7 +17,7 @@ func getStorePath() string {
 	if u, err := user.Current(); err == nil {
 		return filepath.Join(u.HomeDir, "harnsgateway")
 	} else {
-		klog.ErrorS(err, "Failed to get home dir")
+		logging.ErrorS(err, "Failed to get home dir")
 		return "./harnsgateway"
 	}
 }

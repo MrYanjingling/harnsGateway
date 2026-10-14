@@ -3,7 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"harnsgateway/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 	"time"
 )
 

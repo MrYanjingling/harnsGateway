@@ -5,12 +5,12 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"github.com/MrYanjingling/harns-platform/pkg/apis"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/fileutil"
 	"golang.org/x/mod/sumdb"
-	"harnsgateway/pkg/apis"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/utils/fileutil"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -33,10 +33,10 @@ func (fc *FsClient) Init(sg StoreGroup) {
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			if err := os.MkdirAll(storePath, 0777); err != nil {
-				klog.Fatalf("%s: %v", storePath, err)
+				logging.Fatalf("%s: %v", storePath, err)
 			}
 		} else {
-			klog.Fatalf("%s: %v", storePath, err)
+			logging.Fatalf("%s: %v", storePath, err)
 		}
 	}
 
@@ -51,7 +51,7 @@ func (fc *FsClient) Init(sg StoreGroup) {
 			"",
 		}
 	default:
-		klog.Fatalf("Unsupported store group %d", sg)
+		logging.Fatalf("Unsupported store group %d", sg)
 	}
 
 	fc.storePath = filepath.Join(storePath, StoreGroupToString[sg])
@@ -62,12 +62,12 @@ func (fc *FsClient) Init(sg StoreGroup) {
 		_, err = os.Stat(p)
 		if os.IsNotExist(err) {
 			absPath, _ := filepath.Abs(p)
-			klog.V(2).InfoS("Created", "path", absPath)
+			logging.V(2).InfoS("Created", "path", absPath)
 			if err = os.MkdirAll(p, 0711); err != nil {
-				klog.Fatal(err)
+				logging.Fatal(err)
 			}
 		} else if err != nil {
-			klog.Fatal(err)
+			logging.Fatal(err)
 		}
 	}
 
@@ -80,13 +80,13 @@ func (fc *FsClient) Init(sg StoreGroup) {
 func (fc *FsClient) Create(key string, obj interface{}) (interface{}, error) {
 	f, err := os.OpenFile(filepath.Join(fc.storePath, key), os.O_CREATE|os.O_RDWR|os.O_EXCL, 0640)
 	if err != nil {
-		klog.V(2).InfoS("Failed to create file", "err", err)
+		logging.V(2).InfoS("Failed to create file", "err", err)
 		return nil, err
 	}
 	defer f.Close()
 	err = json.NewEncoder(f).Encode(obj)
 	if err != nil {
-		klog.V(2).InfoS("Failed to encode", "err", err)
+		logging.V(2).InfoS("Failed to encode", "err", err)
 		return nil, err
 	}
 	return obj, nil
@@ -95,7 +95,7 @@ func (fc *FsClient) Create(key string, obj interface{}) (interface{}, error) {
 func (fc *FsClient) Get(key string) (interface{}, error) {
 	data, err := os.ReadFile(filepath.Join(fc.storePath, key))
 	if err != nil {
-		klog.V(2).InfoS("Failed to read", "err", err)
+		logging.V(2).InfoS("Failed to read", "err", err)
 		return nil, err
 	}
 	return data, nil
@@ -112,7 +112,7 @@ func (fc *FsClient) List(key string) (interface{}, error) {
 		return nil
 	})
 	if err != nil {
-		klog.V(2).InfoS("Failed to list", "err", err)
+		logging.V(2).InfoS("Failed to list", "err", err)
 	}
 	return files, nil
 }
@@ -124,7 +124,7 @@ func (fc *FsClient) Delete(key, version string) (interface{}, error) {
 		wait.UntilWithContext(c, func(ctx context.Context) {
 			if err := os.Remove(filepath.Join(fc.storePath, key)); !isEphemeralError(err) {
 				if err != nil {
-					klog.V(5).InfoS("Failed to remove file", "err", err)
+					logging.V(5).InfoS("Failed to remove file", "err", err)
 				}
 				cancel()
 			}
@@ -135,10 +135,10 @@ func (fc *FsClient) Delete(key, version string) (interface{}, error) {
 	f, err := os.OpenFile(filepath.Join(fc.storePath, key), os.O_RDONLY, 0640)
 	if err != nil {
 		if os.IsNotExist(err) {
-			klog.V(2).InfoS("Failed to open file", "err", err)
+			logging.V(2).InfoS("Failed to open file", "err", err)
 			return nil, os.ErrNotExist
 		} else if isEphemeralError(err) {
-			klog.V(2).InfoS("Failed to open file", "err", err)
+			logging.V(2).InfoS("Failed to open file", "err", err)
 			return nil, sumdb.ErrWriteConflict
 		}
 	}
@@ -146,7 +146,7 @@ func (fc *FsClient) Delete(key, version string) (interface{}, error) {
 
 	lock, err := fileutil.NewLock(f)
 	if err != nil {
-		klog.V(2).InfoS("Failed to lock", "err", err)
+		logging.V(2).InfoS("Failed to lock", "err", err)
 		return nil, sumdb.ErrWriteConflict
 	}
 	defer lock.Release()
@@ -156,7 +156,7 @@ func (fc *FsClient) Delete(key, version string) (interface{}, error) {
 	}
 	err = json.NewDecoder(f).Decode(&target)
 	if err != nil {
-		klog.V(2).InfoS("Failed to unmarshal", "err", err)
+		logging.V(2).InfoS("Failed to unmarshal", "err", err)
 		return nil, apis.ErrInternal
 	}
 	if target.Version != version {
@@ -166,7 +166,7 @@ func (fc *FsClient) Delete(key, version string) (interface{}, error) {
 
 	err = os.Remove(filepath.Join(fc.storePath, key))
 	if err != nil {
-		klog.V(2).InfoS("Failed to remove", "err", err)
+		logging.V(2).InfoS("Failed to remove", "err", err)
 		return nil, apis.ErrInternal
 	}
 	return nil, nil
@@ -176,10 +176,10 @@ func (fc *FsClient) Update(key, version string, obj interface{}) (interface{}, e
 	f, err := os.OpenFile(filepath.Join(fc.storePath, key), os.O_RDWR, 0640)
 	if err != nil {
 		if os.IsNotExist(err) {
-			klog.V(2).InfoS("Failed to open file", "err", err)
+			logging.V(2).InfoS("Failed to open file", "err", err)
 			return nil, os.ErrNotExist
 		} else if isEphemeralError(err) {
-			klog.V(2).InfoS("Failed to open file", "err", err)
+			logging.V(2).InfoS("Failed to open file", "err", err)
 			return nil, sumdb.ErrWriteConflict
 		}
 	}
@@ -187,7 +187,7 @@ func (fc *FsClient) Update(key, version string, obj interface{}) (interface{}, e
 
 	lock, err := fileutil.NewLock(f)
 	if err != nil {
-		klog.V(2).InfoS("Failed to lock", "err", err)
+		logging.V(2).InfoS("Failed to lock", "err", err)
 		return nil, sumdb.ErrWriteConflict
 	}
 	defer lock.Release()
@@ -197,7 +197,7 @@ func (fc *FsClient) Update(key, version string, obj interface{}) (interface{}, e
 	}
 	err = json.NewDecoder(f).Decode(&old)
 	if err != nil {
-		klog.V(2).InfoS("Failed to unmarshal", "err", err)
+		logging.V(2).InfoS("Failed to unmarshal", "err", err)
 		return nil, apis.ErrInternal
 	}
 	if version != old.Version {
@@ -206,22 +206,22 @@ func (fc *FsClient) Update(key, version string, obj interface{}) (interface{}, e
 	ver, _ := strconv.ParseUint(version, 10, 64)
 	accessor, err := runtime.Accessor(obj)
 	if err != nil {
-		klog.V(2).InfoS("Failed to get accessor", "err", err)
+		logging.V(2).InfoS("Failed to get accessor", "err", err)
 		return nil, apis.ErrInternal
 	}
 	accessor.SetVersion(strconv.FormatUint(ver+uint64(rand.Intn(100)), 10))
 
 	if err = f.Truncate(0); err != nil {
-		klog.V(2).InfoS("Failed to truncate", "err", err)
+		logging.V(2).InfoS("Failed to truncate", "err", err)
 		return nil, apis.ErrInternal
 	}
 	if _, err = f.Seek(0, 0); err != nil {
-		klog.V(2).InfoS("Failed to seek", "err", err)
+		logging.V(2).InfoS("Failed to seek", "err", err)
 		return nil, apis.ErrInternal
 	}
 	err = json.NewEncoder(f).Encode(obj)
 	if err != nil {
-		klog.V(2).InfoS("Failed to marshal", "err", err)
+		logging.V(2).InfoS("Failed to marshal", "err", err)
 		return nil, apis.ErrInternal
 	}
 

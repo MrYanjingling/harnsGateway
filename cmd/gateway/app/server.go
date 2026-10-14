@@ -2,16 +2,16 @@ package app
 
 import (
 	"context"
+	"github.com/MrYanjingling/harns-platform/cmd/gateway/options"
+	"github.com/MrYanjingling/harns-platform/pkg/generic"
+	baseoptions "github.com/MrYanjingling/harns-platform/pkg/generic/options"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/version"
+	"github.com/MrYanjingling/harns-platform/pkg/version/verflag"
+	"github.com/MrYanjingling/harns-platform/pkg/web"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"harnsgateway/cmd/gateway/options"
-	"harnsgateway/pkg/generic"
-	baseoptions "harnsgateway/pkg/generic/options"
-	"harnsgateway/pkg/version"
-	"harnsgateway/pkg/version/verflag"
-	"harnsgateway/pkg/web"
 	utilserrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/klog/v2"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,7 +31,7 @@ func NewGatewayCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// initial flag parse, since we disable cobra's flag parsing
 			if err := cleanFlagSet.Parse(args); err != nil {
-				klog.ErrorS(err, "Failed to parse flag")
+				logging.ErrorS(err, "Failed to parse flag")
 				_ = cmd.Usage()
 				os.Exit(1)
 			}
@@ -39,7 +39,7 @@ func NewGatewayCmd() *cobra.Command {
 			// check if there are non-flag arguments in the command line
 			cmds := cleanFlagSet.Args()
 			if len(cmds) > 0 {
-				klog.ErrorS(nil, "Unknown command", "command", cmds[0])
+				logging.ErrorS(nil, "Unknown command", "command", cmds[0])
 				_ = cmd.Usage()
 				os.Exit(1)
 			}
@@ -63,7 +63,7 @@ func NewGatewayCmd() *cobra.Command {
 			}
 
 			// To help debugging, immediately log version
-			klog.Infof("Version: %+v", version.Get())
+			logging.Infof("Version: %+v", version.Get())
 			return run(o)
 		},
 	}
@@ -93,7 +93,7 @@ func run(o *options.Options) error {
 	if err != nil {
 		return err
 	}
-	klog.V(1).InfoS("Server started", "port", o.Port)
+	logging.V(1).InfoS("Server started", "port", o.Port)
 	// Graceful shutdown
 	// Wait for interrupt signal to gracefully shutdown the server
 	exitCh := make(chan os.Signal, 1)
@@ -102,7 +102,7 @@ func run(o *options.Options) error {
 	// kill -9 is syscall.SIGKILL but can't be catch, so don't need add it
 	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
 	<-exitCh
-	ctx, cancel := context.WithTimeout(context.Background(), o.Wait)
+	ctx, cancel := context.WithTimeout(context.Background(), o.Wait.Duration())
 	defer cancel()
 
 	exit(ctx)

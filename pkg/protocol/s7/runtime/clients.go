@@ -3,9 +3,9 @@ package runtime
 import (
 	"container/list"
 	"context"
-	"harnsgateway/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 	"io"
-	"k8s.io/klog/v2"
 	"net"
 	"sync"
 	"time"
@@ -130,7 +130,7 @@ func (tc *TcpClient) Close() {
 func (tc *TcpClient) AskAtLeast(request []byte, response []byte, min int) (int, error) {
 	_, err := tc.Tunnel.Write(request)
 	if err != nil {
-		klog.V(2).InfoS("Failed to ask message", "error", err)
+		logging.V(2).InfoS("Failed to ask message", "error", err)
 		return 0, ErrBadConn
 	}
 	// 设置读超时
@@ -138,7 +138,7 @@ func (tc *TcpClient) AskAtLeast(request []byte, response []byte, min int) (int, 
 
 	err = tc.Tunnel.SetReadDeadline(deadLineTime)
 	if err != nil {
-		klog.V(2).InfoS("Tcp connect timeout", "error", err)
+		logging.V(2).InfoS("Tcp connect timeout", "error", err)
 		return 0, err
 	}
 	return io.ReadAtLeast(tc.Tunnel, response, min)

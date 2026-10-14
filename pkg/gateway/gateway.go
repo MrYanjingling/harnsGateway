@@ -1,6 +1,6 @@
 package gateway
 
-import "harnsgateway/pkg/runtime"
+import "github.com/MrYanjingling/harns-platform/pkg/runtime"
 
 type GatewayMeta struct {
 	Secret string `json:"secret"`

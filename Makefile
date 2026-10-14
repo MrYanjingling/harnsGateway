@@ -63,6 +63,28 @@ all: verify-golang
 	hack/make-rules/build.sh $(WHAT)
 endif
 
+define PACKAGE_HELP_INFO
+# Build code and package the binaries together with etc/ config into a zip archive.
+#
+# Args:
+#   WHAT: Directory names to build.
+#   GOFLAGS: Extra flags to pass to 'go' when building.
+#   GOLDFLAGS: Extra linking flags passed to 'go' when building.
+#   GOGCFLAGS: Additional go compile flags passed to 'go' when building.
+#
+# Example:
+#   make package
+#   make package WHAT=cmd/gateway
+endef
+.PHONY: package
+ifeq ($(PRINT_HELP),y)
+package:
+	@echo "$$PACKAGE_HELP_INFO"
+else
+package: verify-golang
+	hack/make-rules/package.sh $(WHAT)
+endif
+
 define CHECK_TEST_HELP_INFO
 # Build and run tests.
 #

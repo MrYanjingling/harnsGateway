@@ -14,8 +14,8 @@
 package tsdbutil
 
 import (
-	"lightiot/pkg/tsdb/chunkenc"
-	"lightiot/pkg/tsdb/chunks"
+	"github.com/MrYanjingling/harns-platform/pkg/tsdb/chunkenc"
+	"github.com/MrYanjingling/harns-platform/pkg/tsdb/chunks"
 )
 
 type Samples interface {

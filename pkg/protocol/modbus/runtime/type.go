@@ -1,9 +1,9 @@
 package runtime
 
 import (
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	"harnsgateway/pkg/utils/binutil"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
 )
 
 var _ runtime.Device = (*ModBusDevice)(nil)

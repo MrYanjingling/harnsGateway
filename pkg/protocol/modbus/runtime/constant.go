@@ -2,8 +2,8 @@ package runtime
 
 import (
 	"errors"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 	"go.bug.st/serial"
-	"harnsgateway/pkg/runtime/constant"
 )
 
 var ErrModbusBadConn = errors.New("bad Modbus connection")

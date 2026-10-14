@@ -1,0 +1,33 @@
+# harns-gateway configuration file.
+#
+# Place this file at /etc/gateway/config.yaml (the default path loaded on startup),
+# or point to it explicitly with:  ./harns-gateway -c /etc/gateway/config.yaml
+#
+# Command-line flags always override values defined here.
+
+# HTTP/HTTPS port exposed by the gateway.
+port: "32200"
+
+# The duration the server gracefully waits for existing connections to finish
+# before shutting down (e.g. 15s, 1m).
+graceful-timeout: 15s
+
+# MQTT broker urls. Scheme must be one of "tcp", "ssl" or "ws".
+mqtt-broker-urls:
+  - tcp://127.0.0.1:1883
+
+mqtt-username: ""
+mqtt-password: ""
+
+# TLS certificates. Leave both empty to serve plain HTTP.
+cert-file: ""
+key-file: ""
+
+# Logging configuration.
+logging:
+  # Log format: "text" or "json".
+  format: text
+  # Verbosity threshold for V(level) logs.
+  verbosity: 2
+  # Destination: "stderr", "stdout" or a file path.
+  output: stderr

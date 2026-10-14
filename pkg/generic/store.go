@@ -3,9 +3,9 @@ package generic
 import (
 	"encoding/json"
 	"fmt"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/storage"
-	"k8s.io/klog/v2"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/storage"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -85,11 +85,11 @@ func (s *Store) LoadResource() ([]runtime.Device, error) {
 				f, err := os.Open(file.Path)
 				defer f.Close()
 				if err != nil {
-					klog.V(2).InfoS("Failed to open", "file", file.Path, "resource", s.Resource, "err", err)
+					logging.V(2).InfoS("Failed to open", "file", file.Path, "resource", s.Resource, "err", err)
 					return
 				}
 				if err = json.NewDecoder(f).Decode(obj); err != nil {
-					klog.V(3).InfoS("Failed to unmarshal", "file", file.Path, "resource", s.Resource, "err", err)
+					logging.V(3).InfoS("Failed to unmarshal", "file", file.Path, "resource", s.Resource, "err", err)
 					return
 				}
 				ret = append(ret, obj)

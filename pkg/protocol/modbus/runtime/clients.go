@@ -3,10 +3,10 @@ package runtime
 import (
 	"container/list"
 	"context"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 	"go.bug.st/serial"
-	"harnsgateway/pkg/runtime/constant"
 	"io"
-	"k8s.io/klog/v2"
 	"net"
 	"sync"
 	"time"
@@ -134,7 +134,7 @@ func (tc *TcpClient) Close() {
 func (tc *TcpClient) AskAtLeast(request []byte, response []byte, min int) (int, error) {
 	_, err := tc.Tunnel.Write(request)
 	if err != nil {
-		klog.V(2).InfoS("Failed to ask message", "error", err)
+		logging.V(2).InfoS("Failed to ask message", "error", err)
 		return 0, ErrModbusBadConn
 	}
 	// 设置读超时
@@ -142,7 +142,7 @@ func (tc *TcpClient) AskAtLeast(request []byte, response []byte, min int) (int, 
 
 	err = tc.Tunnel.SetReadDeadline(deadLineTime)
 	if err != nil {
-		klog.V(2).InfoS("Tcp connect timeout", "error", err)
+		logging.V(2).InfoS("Tcp connect timeout", "error", err)
 		return 0, err
 	}
 	return io.ReadAtLeast(tc.Tunnel, response, min)
@@ -169,15 +169,15 @@ func (sc *SerialClient) Close() {
 func (sc *SerialClient) AskAtLeast(request []byte, response []byte, min int) (int, error) {
 	rql, err := sc.Port.Write(request)
 	if err != nil {
-		klog.V(2).InfoS("Failed to write byte to series port", "error", err)
+		logging.V(2).InfoS("Failed to write byte to series port", "error", err)
 		return 0, ErrModbusBadConn
 	}
-	klog.V(5).InfoS("Succeed to write byte to series port", "bytes", request, "length", rql)
+	logging.V(5).InfoS("Succeed to write byte to series port", "bytes", request, "length", rql)
 	// 设置读超时
 	deadLineTime := time.Duration(sc.Timeout) * time.Second
 	err = sc.Port.SetReadTimeout(deadLineTime)
 	if err != nil {
-		klog.V(2).InfoS("Serial port connect timeout", "error", err)
+		logging.V(2).InfoS("Serial port connect timeout", "error", err)
 		return 0, err
 	}
 
@@ -189,7 +189,7 @@ func (sc *SerialClient) AskAtLeast(request []byte, response []byte, min int) (in
 	for {
 		n, err := sc.Port.Read(buf)
 		if err != nil {
-			klog.V(2).InfoS("Failed to read byte from series port", "error", err)
+			logging.V(2).InfoS("Failed to read byte from series port", "error", err)
 			return 0, err
 		}
 		if n == 0 {
@@ -207,7 +207,7 @@ func (sc *SerialClient) AskAtLeast(request []byte, response []byte, min int) (in
 		}
 	}
 	if responseBytesLength != bytesLength {
-		klog.V(2).InfoS("Modbus rtu data length no enough", "bytesLength", bytesLength)
+		logging.V(2).InfoS("Modbus rtu data length no enough", "bytesLength", bytesLength)
 		return 0, ErrMessageDataLengthNotEnough
 	}
 

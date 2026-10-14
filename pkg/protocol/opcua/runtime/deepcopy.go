@@ -1,6 +1,6 @@
 package runtime
 
-import "harnsgateway/pkg/runtime"
+import "github.com/MrYanjingling/harns-platform/pkg/runtime"
 
 func (in *OpcUaDevice) DeepCopyObject() runtime.RunObject {
 	if in == nil {

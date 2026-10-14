@@ -3,10 +3,10 @@ package model
 import (
 	"container/list"
 	"fmt"
-	s7 "harnsgateway/pkg/protocol/s7/runtime"
-	"harnsgateway/pkg/utils/binutil"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	s7 "github.com/MrYanjingling/harns-platform/pkg/protocol/s7/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
 	"io"
-	"k8s.io/klog/v2"
 	"net"
 	"sync"
 )
@@ -23,19 +23,19 @@ func (s *S71500) GetS7DevicePDULength(address *s7.S7Address) (uint16, error) {
 		}
 	}()
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device", "address", addr, "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device", "address", addr, "error", err)
 		return 0, err
 	}
 
 	_, err = tunnel.Write(newCOTPConnectMessage(address.Option.Rack, address.Option.Slot))
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device passed COTP message", "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed COTP message", "error", err)
 		return 0, err
 	}
 	cotpResponse := make([]byte, 22)
 	_, err = io.ReadAtLeast(tunnel, cotpResponse, 22)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device passed COTP message", "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed COTP message", "error", err)
 		return 0, err
 	}
 	if int(cotpResponse[5]) != 208 {
@@ -43,19 +43,19 @@ func (s *S71500) GetS7DevicePDULength(address *s7.S7Address) (uint16, error) {
 	}
 	_, err = tunnel.Write(newS7COMMSetupMessage())
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "error", err)
 		return 0, err
 	}
 	s7Response := make([]byte, 27)
 	_, err = io.ReadAtLeast(tunnel, s7Response, 27)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "error", err)
 		return 0, err
 	}
 	if s7Response[8] != 3 {
 		errClass := int(s7Response[17])
 		errCode := int(s7Response[18])
-		klog.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "errClass", errClass, "errCode", errCode, "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "errClass", errClass, "errCode", errCode, "error", err)
 		return 0, s7.ErrConnectS7DeviceS7COMMMessage
 	}
 
@@ -72,7 +72,7 @@ func (s *S71500) NewClients(address *s7.S7Address, dataFrameCount int) (*s7.Clie
 	for i := 0; i < tcpChannel; i++ {
 		m, err := newS7Messenger(addr, address.Option.Rack, address.Option.Slot)
 		if err != nil {
-			klog.V(2).InfoS("Failed to connect s7 server", "error", err)
+			logging.V(2).InfoS("Failed to connect s7 server", "error", err)
 			return nil, err
 		}
 		ms.PushBack(m)
@@ -95,19 +95,19 @@ func (s *S71500) NewClients(address *s7.S7Address, dataFrameCount int) (*s7.Clie
 func newS7Messenger(addr string, rack uint8, slot uint8) (s7.Messenger, error) {
 	tunnel, err := net.Dial("tcp", addr)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device", "address", addr, "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device", "address", addr, "error", err)
 		return nil, err
 	}
 
 	_, err = tunnel.Write(newCOTPConnectMessage(rack, slot))
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device passed COTP message", "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed COTP message", "error", err)
 		return nil, err
 	}
 	cotpResponse := make([]byte, 22)
 	_, err = io.ReadAtLeast(tunnel, cotpResponse, 22)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device passed COTP message", "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed COTP message", "error", err)
 		return nil, err
 	}
 	if int(cotpResponse[5]) != 208 {
@@ -115,19 +115,19 @@ func newS7Messenger(addr string, rack uint8, slot uint8) (s7.Messenger, error) {
 	}
 	_, err = tunnel.Write(newS7COMMSetupMessage())
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "error", err)
 		return nil, err
 	}
 	s7Response := make([]byte, 27)
 	_, err = io.ReadAtLeast(tunnel, s7Response, 27)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "error", err)
 		return nil, err
 	}
 	if s7Response[8] != 3 {
 		errClass := int(s7Response[17])
 		errCode := int(s7Response[18])
-		klog.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "errClass", errClass, "errCode", errCode, "error", err)
+		logging.V(2).InfoS("Failed to connect s7 device passed S7COMM message", "errClass", errClass, "errCode", errCode, "error", err)
 		return nil, s7.ErrConnectS7DeviceS7COMMMessage
 	}
 	return &s7.TcpClient{

@@ -1,86 +1,63 @@
 package options
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/spf13/pflag"
-	"k8s.io/component-base/config"
-	"k8s.io/component-base/logs"
-	"k8s.io/component-base/logs/registry"
-	"strings"
+
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
 )
 
+// LoggingConfiguration configures the shared structured logger.
 type LoggingConfiguration struct {
-	// Refer [Logs Options](https://github.com/kubernetes/component-base/blob/master/logs/options.go) for more information.
-	config.LoggingConfiguration
+	// Format is the log output format: "text" or "json".
+	Format string `json:"format"`
+	// Verbosity is the V level threshold, mirroring klog -v.
+	Verbosity int `json:"verbosity"`
+	// Output is the log destination: "stderr", "stdout" or a file path.
+	Output string `json:"output"`
 }
 
 func NewDefaultLoggingConfiguration() LoggingConfiguration {
 	return LoggingConfiguration{
-		config.LoggingConfiguration{
-			Format:    "text",
-			Verbosity: 2,
-		},
+		Format:    logging.FormatText,
+		Verbosity: logging.DefaultVerbosity,
+		Output:    "stderr",
 	}
 }
 
 func (l *LoggingConfiguration) ValidateAndApply() error {
-	o := logs.NewOptions()
-	o.Config.Format = l.Format
-	o.Config.Verbosity = l.Verbosity
-	o.Config.VModule = l.VModule
-	return o.ValidateAndApply()
-}
-
-type marshalLoggingConfig struct {
-	Format    string
-	Verbosity config.VerbosityLevel
-	VModule   config.VModuleConfiguration
-}
-
-func (l *LoggingConfiguration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&marshalLoggingConfig{
-		Format:    l.Format,
-		Verbosity: l.Verbosity,
-		VModule:   l.VModule,
-	})
-}
-
-func (l *LoggingConfiguration) UnmarshalJSON(bytes []byte) error {
-	in := &marshalLoggingConfig{}
-	if err := json.Unmarshal(bytes, in); err != nil {
+	if l.Format != logging.FormatText && l.Format != logging.FormatJSON {
+		return fmt.Errorf("unsupported log format %q, permitted formats are %q and %q", l.Format, logging.FormatText, logging.FormatJSON)
+	}
+	w, err := l.outputWriter()
+	if err != nil {
 		return err
 	}
-	l.Format = in.Format
-	l.Verbosity = in.Verbosity
-	l.VModule = in.VModule
+	logging.SetLogger(logging.NewLogger(l.Format, w))
+	logging.SetVerbosity(l.Verbosity)
 	return nil
 }
 
-func (l *LoggingConfiguration) BindLoggingFlags(fs *pflag.FlagSet) {
-	// flagSet := flag.NewFlagSet("logging-file", flag.ContinueOnError)
-	// klog.InitFlags(flagSet)
-	//
-	// fs.AddGoFlagSet(flagSet)
-	notHidden := map[string]bool{
-		"v":              true,
-		"vmodule":        true,
-		"logging-format": true,
-	}
-
-	logsFs := pflag.NewFlagSet("", pflag.ContinueOnError)
-	logs.BindLoggingFlags(&l.LoggingConfiguration, logsFs)
-	logsFs.VisitAll(func(f *pflag.Flag) {
-		if notHidden[f.Name] {
-			if f.Name == "logging-format" {
-				formats := fmt.Sprintf(`"%s"`, strings.Join(registry.LogRegistry.List(), `", "`))
-				f.Usage = fmt.Sprintf("Sets the log format. Permitted formats: %s.", formats)
-			}
-			return
+func (l *LoggingConfiguration) outputWriter() (io.Writer, error) {
+	switch l.Output {
+	case "", "stderr":
+		return os.Stderr, nil
+	case "stdout":
+		return os.Stdout, nil
+	default:
+		f, err := os.OpenFile(l.Output, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open log file %q: %w", l.Output, err)
 		}
-		f.Hidden = true
-	})
+		return f, nil
+	}
+}
 
-	fs.AddFlagSet(logsFs)
-	// fs.SetNormalizeFunc(cliflag.WordSepNormalizeFunc)
+func (l *LoggingConfiguration) BindLoggingFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&l.Format, "logging-format", l.Format, "Sets the log format. Permitted formats: \"text\", \"json\".")
+	fs.IntVarP(&l.Verbosity, "verbosity", "v", l.Verbosity, "number for the log level verbosity")
+	fs.StringVar(&l.Output, "logging-output", l.Output, "Log output destination: \"stderr\", \"stdout\" or a file path")
 }

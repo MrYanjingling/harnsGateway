@@ -2,12 +2,12 @@ package model
 
 import (
 	"container/list"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	modbus "github.com/MrYanjingling/harns-platform/pkg/protocol/modbus/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/crcutil"
 	"go.bug.st/serial"
-	modbus "harnsgateway/pkg/protocol/modbus/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	"harnsgateway/pkg/utils/binutil"
-	"harnsgateway/pkg/utils/crcutil"
-	"k8s.io/klog/v2"
 	"sync"
 )
 
@@ -25,7 +25,7 @@ func (m *ModbusRtu) NewClients(address *modbus.Address, dataFrameCount int) (*mo
 	}
 	port, err := serial.Open(address.Location, mode)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect serial port", "address", address.Location)
+		logging.V(2).InfoS("Failed to connect serial port", "address", address.Location)
 		return nil, err
 	}
 
@@ -45,7 +45,7 @@ func (m *ModbusRtu) NewClients(address *modbus.Address, dataFrameCount int) (*mo
 		NewMessenger: func() (modbus.Messenger, error) {
 			newPort, err := serial.Open(address.Location, mode)
 			if err != nil {
-				klog.V(2).InfoS("Failed to connect serial port", "address", address.Location)
+				logging.V(2).InfoS("Failed to connect serial port", "address", address.Location)
 				return nil, err
 			}
 			return &modbus.SerialClient{

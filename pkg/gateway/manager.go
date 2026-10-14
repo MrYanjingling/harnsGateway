@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/MrYanjingling/harns-platform/pkg/host"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/storage"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/randutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/uuidutil"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
-	"harnsgateway/pkg/host"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/storage"
-	"harnsgateway/pkg/utils/randutil"
-	"harnsgateway/pkg/utils/uuidutil"
-	"k8s.io/klog/v2"
 	"os"
 	"strconv"
 	"sync"
@@ -56,12 +56,12 @@ func (m *Manager) Init() {
 				ModTime: time.Now(),
 			},
 		}
-		klog.V(3).InfoS("Gateway information not exist,been created automatically", "gatewayId", m.gatewayMeta.ID)
+		logging.V(3).InfoS("Gateway information not exist,been created automatically", "gatewayId", m.gatewayMeta.ID)
 		if _, err := client.Create(gateway, m.gatewayMeta); err != nil {
-			klog.V(2).InfoS("Failed to create gateway information", "err", err)
+			logging.V(2).InfoS("Failed to create gateway information", "err", err)
 		}
 	} else if err = json.NewDecoder(bytes.NewReader(gd.([]byte))).Decode(m.gatewayMeta); err != nil {
-		klog.V(2).InfoS("Failed to unmarshal gateway information", "err", err)
+		logging.V(2).InfoS("Failed to unmarshal gateway information", "err", err)
 		return
 	}
 
@@ -107,7 +107,7 @@ func (m *Manager) getGatewayCpu() (map[string]string, error) {
 func (m *Manager) getGatewayMem() (*MemUsageInfo, error) {
 	v, err := mem.VirtualMemory()
 	if err != nil {
-		klog.V(2).InfoS("Failed to get gateway mem info", "err", err)
+		logging.V(2).InfoS("Failed to get gateway mem info", "err", err)
 		return nil, err
 	}
 	total := v.Total / 1024 / 1024
@@ -124,7 +124,7 @@ func (m *Manager) getGatewayDisk() (map[string]*DiskUsageInfo, error) {
 	data := map[string]*DiskUsageInfo{}
 	osDiskUsage, err := disk.Usage(host.GetOSDisk())
 	if err != nil {
-		klog.V(2).InfoS("Failed to get gateway os disk info", "err", err)
+		logging.V(2).InfoS("Failed to get gateway os disk info", "err", err)
 		return nil, err
 	}
 	total := osDiskUsage.Total / 1024 / 1024
@@ -138,7 +138,7 @@ func (m *Manager) getGatewayDisk() (map[string]*DiskUsageInfo, error) {
 
 	dataDiskUsage, err := disk.Usage(host.GetDataDisk())
 	if err != nil {
-		klog.V(2).InfoS("Failed to get gateway data disk info", "err", err)
+		logging.V(2).InfoS("Failed to get gateway data disk info", "err", err)
 		return nil, err
 	}
 	total = dataDiskUsage.Total / 1024 / 1024
@@ -163,7 +163,7 @@ func (m *Manager) collectCpu() {
 		default:
 			percent, err := cpu.Percent(time.Minute, false)
 			if err != nil {
-				klog.V(2).InfoS("Failed to collect gateway cpu info")
+				logging.V(2).InfoS("Failed to collect gateway cpu info")
 			}
 			m.mux.Lock()
 			if len(m.cpus) < 15 {

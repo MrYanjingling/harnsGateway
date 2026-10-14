@@ -3,14 +3,14 @@ package modbus
 import (
 	"context"
 	"errors"
-	"harnsgateway/pkg/apis/response"
-	"harnsgateway/pkg/protocol/modbus/model"
-	modbus "harnsgateway/pkg/protocol/modbus/runtime"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	"harnsgateway/pkg/utils/binutil"
-	"harnsgateway/pkg/utils/crcutil"
-	"k8s.io/klog/v2"
+	"github.com/MrYanjingling/harns-platform/pkg/apis/response"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/protocol/modbus/model"
+	modbus "github.com/MrYanjingling/harns-platform/pkg/protocol/modbus/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/crcutil"
 	"sort"
 	"strconv"
 	"sync"
@@ -44,7 +44,7 @@ type ModbusBroker struct {
 func NewBroker(d runtime.Device) (runtime.Broker, chan *runtime.ParseVariableResult, error) {
 	device, ok := d.(*modbus.ModBusDevice)
 	if !ok {
-		klog.V(2).InfoS("Unsupported device,type not Modbus")
+		logging.V(2).InfoS("Unsupported device,type not Modbus")
 		return nil, nil, constant.ErrDeviceType
 	}
 
@@ -131,13 +131,13 @@ func NewBroker(d runtime.Device) (runtime.Broker, chan *runtime.ParseVariableRes
 		dataFrameCount += len(values)
 	}
 	if dataFrameCount == 0 {
-		klog.V(2).InfoS("Unnecessary to collect from Modbus device.Because of the variables is empty", "deviceId", device.ID)
+		logging.V(2).InfoS("Unnecessary to collect from Modbus device.Because of the variables is empty", "deviceId", device.ID)
 		return nil, nil, constant.ErrDeviceEmptyVariable
 	}
 
 	clients, err := model.ModbusModelers[device.DeviceModel].NewClients(device.Address, dataFrameCount)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect Modbus device", "error", err, "deviceId", device.ID)
+		logging.V(2).InfoS("Failed to connect Modbus device", "error", err, "deviceId", device.ID)
 		return nil, nil, constant.ErrConnectDevice
 	}
 
@@ -256,7 +256,7 @@ func (broker *ModbusBroker) DeliverAction(ctx context.Context, obj map[string]in
 				return response.ErrFloat64Invalid(name)
 			}
 		default:
-			klog.V(3).InfoS("Unsupported dataType", "dataType", variableValue.DataType)
+			logging.V(3).InfoS("Unsupported dataType", "dataType", variableValue.DataType)
 		}
 		action = append(action, v)
 	}
@@ -283,7 +283,7 @@ func (broker *ModbusBroker) DeliverAction(ctx context.Context, obj map[string]in
 
 	messenger, err := broker.Clients.GetMessenger(ctx)
 	if err != nil {
-		klog.V(2).InfoS("Failed to get Modbus messenger", "error", err)
+		logging.V(2).InfoS("Failed to get Modbus messenger", "error", err)
 		if messenger, err = broker.Clients.NewMessenger(); err != nil {
 			return err
 		}
@@ -302,7 +302,7 @@ func (broker *ModbusBroker) DeliverAction(ctx context.Context, obj map[string]in
 			transactionId := binutil.ParseUint16(rp[:])
 			requestTransactionId := binutil.ParseUint16(rp[:])
 			if transactionId != requestTransactionId {
-				klog.V(2).InfoS("Failed to match Modbus message transaction id", "request transactionId", requestTransactionId, "response transactionId", transactionId)
+				logging.V(2).InfoS("Failed to match Modbus message transaction id", "request transactionId", requestTransactionId, "response transactionId", transactionId)
 				errs.Add(modbus.ErrMessageTransaction)
 				continue
 			}
@@ -311,13 +311,13 @@ func (broker *ModbusBroker) DeliverAction(ctx context.Context, obj map[string]in
 
 		slave := rp[0]
 		if uint(slave) != broker.Device.Slave {
-			klog.V(2).InfoS("Failed to match Modbus slave", "request slave", broker.Device.Slave, "response slave", slave)
+			logging.V(2).InfoS("Failed to match Modbus slave", "request slave", broker.Device.Slave, "response slave", slave)
 			errs.Add(modbus.ErrMessageSlave)
 			continue
 		}
 		functionCode := rp[1]
 		if functionCode&0x80 > 0 {
-			klog.V(2).InfoS("Failed to parse Modbus message", "error code", functionCode-128)
+			logging.V(2).InfoS("Failed to parse Modbus message", "error code", functionCode-128)
 			errs.Add(modbus.ErrMessageFunctionCodeError)
 			continue
 		}
@@ -354,13 +354,13 @@ func (broker *ModbusBroker) message(ctx context.Context, dataFrame *modbus.ModBu
 	defer sw.Done()
 	defer func() {
 		if err := recover(); err != nil {
-			klog.V(2).InfoS("Failed to ask Modbus server message", "error", err)
+			logging.V(2).InfoS("Failed to ask Modbus server message", "error", err)
 		}
 	}()
 	messenger, err := clients.GetMessenger(ctx)
 	defer broker.Clients.ReleaseMessenger(messenger)
 	if err != nil {
-		klog.V(2).InfoS("Failed to get messenger", "error", err)
+		logging.V(2).InfoS("Failed to get messenger", "error", err)
 		if messenger, err = broker.Clients.NewMessenger(); err != nil {
 			return
 		}
@@ -382,7 +382,7 @@ func (broker *ModbusBroker) message(ctx context.Context, dataFrame *modbus.ModBu
 		}
 		return nil
 	}, messenger, dataFrame); err != nil {
-		klog.V(2).InfoS("Failed to connect modbus server", "error", err)
+		logging.V(2).InfoS("Failed to connect modbus server", "error", err)
 		pvrCh <- &modbus.ParseVariableResult{Err: []error{err}}
 		return
 	}
@@ -403,7 +403,7 @@ func (broker *ModbusBroker) retry(fun func(messenger modbus.Messenger, dataFrame
 			}
 			messenger.Reset(newMessenger)
 		} else {
-			klog.V(2).InfoS("Failed to connect Modbus server", "error", err)
+			logging.V(2).InfoS("Failed to connect Modbus server", "error", err)
 		}
 	}
 	return modbus.ErrManyRetry
@@ -415,7 +415,7 @@ func (broker *ModbusBroker) ValidateAndExtractMessage(df *modbus.ModBusDataFrame
 	if broker.NeedCheckTransaction {
 		transactionId := binutil.ParseUint16(buf[:])
 		if transactionId != df.TransactionId {
-			klog.V(2).InfoS("Failed to match message transaction id", "request transactionId", df.TransactionId, "response transactionId", transactionId)
+			logging.V(2).InfoS("Failed to match message transaction id", "request transactionId", df.TransactionId, "response transactionId", transactionId)
 			return nil, modbus.ErrMessageTransaction
 		}
 		buf = buf[6:]
@@ -423,31 +423,31 @@ func (broker *ModbusBroker) ValidateAndExtractMessage(df *modbus.ModBusDataFrame
 
 	slave := buf[0]
 	if uint(slave) != df.Slave {
-		klog.V(2).InfoS("Failed to match modbus slave", "request slave", df.Slave, "response slave", slave)
+		logging.V(2).InfoS("Failed to match modbus slave", "request slave", df.Slave, "response slave", slave)
 		return nil, modbus.ErrMessageSlave
 	}
 	functionCode := buf[1]
 	if functionCode&0x80 > 0 {
-		klog.V(2).InfoS("Failed to parse modbus tcp message", "error code", functionCode-128)
+		logging.V(2).InfoS("Failed to parse modbus tcp message", "error code", functionCode-128)
 		return nil, modbus.ErrMessageFunctionCodeError
 	}
 
 	byteDataLength := buf[2]
 	if broker.NeedCheckCrc16Sum {
 		if int(byteDataLength)+5 != len(buf) {
-			klog.V(2).InfoS("Failed to get message enough length")
+			logging.V(2).InfoS("Failed to get message enough length")
 			return nil, modbus.ErrMessageDataLengthNotEnough
 		}
 		checkBufData := buf[:byteDataLength+3]
 		sum := crcutil.CheckCrc16sum(checkBufData)
 		crc := binutil.ParseUint16BigEndian(buf[byteDataLength+3 : byteDataLength+5])
 		if sum != crc {
-			klog.V(2).InfoS("Failed to check CRC16")
+			logging.V(2).InfoS("Failed to check CRC16")
 			return nil, modbus.ErrCRC16Error
 		}
 	} else {
 		if int(byteDataLength)+3 != len(buf) {
-			klog.V(2).InfoS("Failed to get message enough length")
+			logging.V(2).InfoS("Failed to get message enough length")
 			return nil, modbus.ErrMessageDataLengthNotEnough
 		}
 	}
@@ -461,7 +461,7 @@ func (broker *ModbusBroker) ValidateAndExtractMessage(df *modbus.ModBusDataFrame
 		bb = binutil.Dup(buf[3:])
 	case modbus.WriteSingleCoil, modbus.WriteSingleRegister, modbus.WriteMultipleCoil, modbus.WriteMultipleRegister:
 	default:
-		klog.V(2).InfoS("Unsupported function code", "functionCode", buf[1])
+		logging.V(2).InfoS("Unsupported function code", "functionCode", buf[1])
 	}
 
 	return bb, nil
@@ -552,7 +552,7 @@ func (broker *ModbusBroker) generateActionBytes(memoryLayout constant.MemoryLayo
 		case modbus.ReadHoldRegister, modbus.ReadInputRegister:
 			switch variable.DataType {
 			case constant.BOOL:
-				klog.V(2).InfoS("Unsupported bool variable with read hold register", "variableName", variable.Name)
+				logging.V(2).InfoS("Unsupported bool variable with read hold register", "variableName", variable.Name)
 				// todo 需要先读取数据
 			case constant.INT16:
 				fc = byte(modbus.WriteSingleRegister)

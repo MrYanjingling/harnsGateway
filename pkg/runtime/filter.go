@@ -1,8 +1,8 @@
 package runtime
 
 import (
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
 	"github.com/mitchellh/mapstructure"
-	"k8s.io/klog/v2"
 	"sort"
 	"strings"
 )
@@ -103,7 +103,7 @@ func ParseTypeFilter(filter *DeviceFilter) []predicateType {
 		} else {
 			var ff NameFilterFunc
 			if err := mapstructure.Decode(filter.Name, &ff); err != nil {
-				klog.V(3).InfoS("Failed to parse filter.name", "err", err)
+				logging.V(3).InfoS("Failed to parse filter.name", "err", err)
 			}
 			// eq
 			if len(ff.Eq) > 0 {

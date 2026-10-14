@@ -29,9 +29,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
-	"lightiot/pkg/tsdb/chunkenc"
-	tsdb_errors "lightiot/pkg/tsdb/errors"
-	"lightiot/pkg/tsdb/fileutil"
+	"github.com/MrYanjingling/harns-platform/pkg/tsdb/chunkenc"
+	tsdb_errors "github.com/MrYanjingling/harns-platform/pkg/tsdb/errors"
+	"github.com/MrYanjingling/harns-platform/pkg/tsdb/fileutil"
 )
 
 // Head chunk file header fields constants.

@@ -1,6 +1,6 @@
 package v1
 
-import "harnsgateway/pkg/runtime/constant"
+import "github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 
 type S7Variable struct {
 	DataType     string              `json:"dataType" binding:"required"`                                   // bool、int16、float32、float64、int32、int64、uint16

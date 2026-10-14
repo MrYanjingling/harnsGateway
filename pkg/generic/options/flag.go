@@ -2,9 +2,9 @@ package options
 
 import (
 	"fmt"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"k8s.io/klog/v2"
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/yaml"
@@ -52,7 +52,7 @@ func (bo *BaseOptions) ValidateAndApply() error {
 func PrintHelpAndExitIfRequested(cmd *cobra.Command, fs *pflag.FlagSet) {
 	help, err := fs.GetBool("help")
 	if err != nil {
-		klog.InfoS(`"help" flag is non-bool, programmer error, please correct`)
+		logging.InfoS(`"help" flag is non-bool, programmer error, please correct`)
 		os.Exit(1)
 	}
 	if help {
@@ -68,13 +68,13 @@ func addDefaultConfig(fs *pflag.FlagSet) {
 func PrintDefaultConfigAndExitIfRequested(config interface{}, fs *pflag.FlagSet) {
 	defaultConfig, err := fs.GetBool("default-config")
 	if err != nil {
-		klog.InfoS(`"defaultConfig" flag is non-bool, programmer error, please correct`)
+		logging.InfoS(`"defaultConfig" flag is non-bool, programmer error, please correct`)
 		os.Exit(1)
 	}
 	if defaultConfig {
 		data, err := yaml.Marshal(config)
 		if err != nil {
-			klog.ErrorS(err, "Failed to marshal default config to yaml")
+			logging.ErrorS(err, "Failed to marshal default config to yaml")
 			os.Exit(1)
 		}
 		fmt.Println("# With --default-config flag, users can easily get a default full config file as reference, with all fields (and field descriptions) included and default values set. ")
@@ -118,6 +118,10 @@ func ParseAndApplyConfigFile(o Optioner, args []string) error {
 	}
 
 	if err := parseConfigFile(o); err != nil {
+		if os.IsNotExist(err) {
+			logging.InfoS("Config file not found, using built-in defaults", "file", o.GetBaseOptions().ConfigFile)
+			return nil
+		}
 		return err
 	}
 	if err := flagPrecedence(o, args); err != nil {
@@ -130,19 +134,21 @@ func ParseAndApplyConfigFile(o Optioner, args []string) error {
 func parseConfigFile(out Optioner) error {
 	configFilePath, err := filepath.Abs(out.GetBaseOptions().ConfigFile)
 	if err != nil {
-		klog.ErrorS(err, "Failed to load config file", "file", configFilePath)
+		logging.ErrorS(err, "Failed to load config file", "file", configFilePath)
 		return err
 	}
 
 	data, err := os.ReadFile(configFilePath)
 	if err != nil {
-		klog.ErrorS(err, "Failed to read config file", "file", configFilePath)
+		if !os.IsNotExist(err) {
+			logging.ErrorS(err, "Failed to read config file", "file", configFilePath)
+		}
 		return err
 	}
 
 	err = yaml.Unmarshal(data, out)
 	if err != nil {
-		klog.ErrorS(err, "Failed to unmarshal config file", "file", configFilePath)
+		logging.ErrorS(err, "Failed to unmarshal config file", "file", configFilePath)
 		return err
 	}
 	return nil

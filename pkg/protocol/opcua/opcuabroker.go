@@ -3,14 +3,14 @@ package opcua
 import (
 	"context"
 	"errors"
+	genericruntime "github.com/MrYanjingling/harns-platform/pkg/generic/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/protocol/opcua/model"
+	opcuaruntime "github.com/MrYanjingling/harns-platform/pkg/protocol/opcua/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 	"github.com/gopcua/opcua/ua"
-	genericruntime "harnsgateway/pkg/generic/runtime"
-	"harnsgateway/pkg/protocol/opcua/model"
-	opcuaruntime "harnsgateway/pkg/protocol/opcua/runtime"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/runtime/constant"
 	"io"
-	"k8s.io/klog/v2"
 	"strconv"
 	"sync"
 	"time"
@@ -36,7 +36,7 @@ type OpcUaBroker struct {
 func NewBroker(d runtime.Device) (runtime.Broker, chan *runtime.ParseVariableResult, error) {
 	device, ok := d.(*opcuaruntime.OpcUaDevice)
 	if !ok {
-		klog.V(2).InfoS("Unsupported device,type not OpcUa")
+		logging.V(2).InfoS("Unsupported device,type not OpcUa")
 		return nil, nil, constant.ErrDeviceType
 	}
 
@@ -54,7 +54,7 @@ func NewBroker(d runtime.Device) (runtime.Broker, chan *runtime.ParseVariableRes
 				} else if address, isString := variable.Address.(string); isString {
 					iAddress, err := strconv.Atoi(address)
 					if err != nil {
-						klog.V(2).InfoS("Failed to parse string address to uint32")
+						logging.V(2).InfoS("Failed to parse string address to uint32")
 					}
 					id = ua.NewNumericNodeID(variable.Namespace, uint32(iAddress))
 				}
@@ -73,13 +73,13 @@ func NewBroker(d runtime.Device) (runtime.Broker, chan *runtime.ParseVariableRes
 				NodesToRead:        requestVariables}})
 	}
 	if len(namespaceVariableDataFrame) == 0 {
-		klog.V(2).InfoS("Unnecessary to collect from OPC device.Because of the variables is empty", "deviceId", device.ID)
+		logging.V(2).InfoS("Unnecessary to collect from OPC device.Because of the variables is empty", "deviceId", device.ID)
 		return nil, nil, constant.ErrDeviceEmptyVariable
 	}
 
 	clients, err := model.OpcUaModelers[device.DeviceModel].NewClients(device.Address, len(namespaceVariableDataFrame))
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect OPC device", "error", err, "deviceId", device.ID)
+		logging.V(2).InfoS("Failed to connect OPC device", "error", err, "deviceId", device.ID)
 		return nil, nil, constant.ErrConnectDevice
 	}
 	mtc := &OpcUaBroker{
@@ -157,13 +157,13 @@ func (broker *OpcUaBroker) message(ctx context.Context, dataFrame *OpuUaDataFram
 		response, err = messenger.Read(ctx, dataFrame.RequestVariables)
 		return err
 	}, messenger, dataFrame); err != nil {
-		klog.V(2).InfoS("Failed to connect opc ua server by retry three times")
+		logging.V(2).InfoS("Failed to connect opc ua server by retry three times")
 		pvrCh <- &opcuaruntime.ParseVariableResult{Err: []error{err}}
 		return
 	}
 
 	if response == nil {
-		klog.V(2).InfoS("Failed to get opc ua server response")
+		logging.V(2).InfoS("Failed to get opc ua server response")
 		return
 	}
 
@@ -219,7 +219,7 @@ func (broker *OpcUaBroker) retry(fun func(m opcuaruntime.Messenger, dataFrame *O
 		case errors.Is(err, ua.StatusBadSecureChannelIDInvalid):
 			continue
 		default:
-			klog.V(2).InfoS("Failed to read opc ua server data", "err", err)
+			logging.V(2).InfoS("Failed to read opc ua server data", "err", err)
 		}
 	}
 	return opcuaruntime.ErrManyRetry

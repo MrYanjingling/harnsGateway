@@ -1,9 +1,9 @@
 package runtime
 
 import (
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	"k8s.io/klog/v2"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 	"strconv"
 	"strings"
 )
@@ -189,7 +189,7 @@ func (v *Variable) BlockSize() uint {
 		blockSizeString := v.Address[2:index]
 		bs, err := strconv.Atoi(blockSizeString)
 		if err != nil {
-			klog.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
+			logging.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
 		}
 		return uint(bs)
 	} else if strings.HasPrefix(v.Address, "Q") {
@@ -213,7 +213,7 @@ func (v *Variable) ParseVariableAddress() (zone S7StoreArea, areaSize uint, addr
 			startAddressString := byteAddress[:]
 			i, err := strconv.Atoi(startAddressString)
 			if err != nil {
-				klog.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
+				logging.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
 			}
 			address = uint32(i)
 			bit = uint8(0)
@@ -221,13 +221,13 @@ func (v *Variable) ParseVariableAddress() (zone S7StoreArea, areaSize uint, addr
 			startAddressString := byteAddress[:index]
 			i, err := strconv.Atoi(startAddressString)
 			if err != nil {
-				klog.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
+				logging.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
 			}
 			address = uint32(i)
 			bitAddressString := byteAddress[index+1:]
 			j, err := strconv.Atoi(bitAddressString)
 			if err != nil {
-				klog.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
+				logging.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
 			}
 			bit = uint8(j)
 		}
@@ -246,7 +246,7 @@ func (v *Variable) ParseVariableAddress() (zone S7StoreArea, areaSize uint, addr
 		blockSizeString := v.Address[2:index]
 		bs, err := strconv.Atoi(blockSizeString)
 		if err != nil {
-			klog.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
+			logging.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
 		}
 		areaSize = uint(bs)
 		byteAddress := v.Address[index+1:]
@@ -259,7 +259,7 @@ func (v *Variable) ParseVariableAddress() (zone S7StoreArea, areaSize uint, addr
 			startAddressString := byteAddress[:]
 			i, err := strconv.Atoi(startAddressString)
 			if err != nil {
-				klog.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
+				logging.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
 			}
 			address = uint32(i)
 			bit = uint8(0)
@@ -267,13 +267,13 @@ func (v *Variable) ParseVariableAddress() (zone S7StoreArea, areaSize uint, addr
 			startAddressString := byteAddress[:lastIndex]
 			i, err := strconv.Atoi(startAddressString)
 			if err != nil {
-				klog.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
+				logging.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
 			}
 			address = uint32(i)
 			bitAddressString := byteAddress[lastIndex+1:]
 			j, err := strconv.Atoi(bitAddressString)
 			if err != nil {
-				klog.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
+				logging.V(2).InfoS("Failed to read s7 variable address", "variableName", v.Name)
 			}
 			bit = uint8(j)
 		}

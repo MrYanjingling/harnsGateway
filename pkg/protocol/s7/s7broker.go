@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"harnsgateway/pkg/apis/response"
-	"harnsgateway/pkg/protocol/s7/model"
-	s7runtime "harnsgateway/pkg/protocol/s7/runtime"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	"harnsgateway/pkg/utils/binutil"
-	"k8s.io/klog/v2"
+	"github.com/MrYanjingling/harns-platform/pkg/apis/response"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/protocol/s7/model"
+	s7runtime "github.com/MrYanjingling/harns-platform/pkg/protocol/s7/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
 	"sort"
 	"strconv"
 	"sync"
@@ -38,15 +38,15 @@ func (df *S7DataFrame) ValidateMessage(least int) ([]byte, error) {
 
 	itemLength := binutil.ParseUint16(buf[15:])
 	if itemLength != uint16(df.DataLength) {
-		klog.V(2).InfoS("Failed to get message enough length")
+		logging.V(2).InfoS("Failed to get message enough length")
 		return nil, s7runtime.ErrMessageDataLengthNotEnough
 	}
 	if uint8(buf[17]) != 0 {
-		klog.V(2).InfoS("Failed to get s7 message")
+		logging.V(2).InfoS("Failed to get s7 message")
 		return nil, s7runtime.ErrMessageS7Response
 	}
 	if uint8(buf[18]) != 0 {
-		klog.V(2).InfoS("Failed to get s7 message")
+		logging.V(2).InfoS("Failed to get s7 message")
 		return nil, s7runtime.ErrMessageS7Response
 	}
 	return buf, nil
@@ -152,12 +152,12 @@ type S7Broker struct {
 func NewBroker(d runtime.Device) (runtime.Broker, chan *runtime.ParseVariableResult, error) {
 	device, ok := d.(*s7runtime.S7Device)
 	if !ok {
-		klog.V(2).InfoS("Unsupported device,type not S7")
+		logging.V(2).InfoS("Unsupported device,type not S7")
 		return nil, nil, constant.ErrDeviceType
 	}
 	maxPduLength, err := model.S7Modelers[device.DeviceModel].GetS7DevicePDULength(device.Address)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect s7 device for request pdu length", "err", err)
+		logging.V(2).InfoS("Failed to connect s7 device for request pdu length", "err", err)
 		return nil, nil, constant.ErrConnectDevice
 	}
 
@@ -232,13 +232,13 @@ func NewBroker(d runtime.Device) (runtime.Broker, chan *runtime.ParseVariableRes
 	}
 
 	if dataFrameCount == 0 {
-		klog.V(2).InfoS("Unnecessary to collect from s7 device.Because of the variables is empty", "deviceId", device.ID)
+		logging.V(2).InfoS("Unnecessary to collect from s7 device.Because of the variables is empty", "deviceId", device.ID)
 		return nil, nil, constant.ErrDeviceEmptyVariable
 	}
 
 	clients, err := model.S7Modelers[device.DeviceModel].NewClients(device.Address, dataFrameCount)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect S7 device", "error", err, "deviceId", device.ID)
+		logging.V(2).InfoS("Failed to connect S7 device", "error", err, "deviceId", device.ID)
 		return nil, nil, constant.ErrConnectDevice
 	}
 
@@ -352,7 +352,7 @@ func (broker *S7Broker) DeliverAction(ctx context.Context, obj map[string]interf
 				return response.ErrFloat64Invalid(name)
 			}
 		default:
-			klog.V(3).InfoS("Unsupported dataType", "dataType", variableValue.DataType)
+			logging.V(3).InfoS("Unsupported dataType", "dataType", variableValue.DataType)
 		}
 		action = append(action, v)
 	}
@@ -380,7 +380,7 @@ func (broker *S7Broker) DeliverAction(ctx context.Context, obj map[string]interf
 
 	messenger, err := broker.Clients.GetMessenger(ctx)
 	if err != nil {
-		klog.V(2).InfoS("Failed to get messenger", "error", err)
+		logging.V(2).InfoS("Failed to get messenger", "error", err)
 		if messenger, err = broker.Clients.NewMessenger(); err != nil {
 			return err
 		}
@@ -396,7 +396,7 @@ func (broker *S7Broker) DeliverAction(ctx context.Context, obj map[string]interf
 			continue
 		}
 		if rp[21] != 255 {
-			klog.V(2).InfoS("Failed to control s7", "errorCode", rp[21])
+			logging.V(2).InfoS("Failed to control s7", "errorCode", rp[21])
 			errs.Add(s7runtime.ErrCommandFailed)
 			continue
 		}
@@ -432,13 +432,13 @@ func (broker *S7Broker) message(ctx context.Context, dataFrame *S7DataFrame, pvr
 	defer sw.Done()
 	defer func() {
 		if err := recover(); err != nil {
-			klog.V(2).InfoS("Failed to ask s7 message", "error", err)
+			logging.V(2).InfoS("Failed to ask s7 message", "error", err)
 		}
 	}()
 	messenger, err := clients.GetMessenger(ctx)
 	defer clients.ReleaseMessenger(messenger)
 	if err != nil {
-		klog.V(2).InfoS("Failed to get tunnel", "error", err)
+		logging.V(2).InfoS("Failed to get tunnel", "error", err)
 		if messenger, err = broker.Clients.NewMessenger(); err != nil {
 			return
 		}
@@ -456,7 +456,7 @@ func (broker *S7Broker) message(ctx context.Context, dataFrame *S7DataFrame, pvr
 		}
 		return nil
 	}, messenger, dataFrame); err != nil {
-		klog.V(2).InfoS("Failed to connect s7 server by retry three times")
+		logging.V(2).InfoS("Failed to connect s7 server by retry three times")
 		pvrCh <- &s7runtime.ParseVariableResult{Err: []error{err}}
 		return
 	}
@@ -478,7 +478,7 @@ func (broker *S7Broker) retry(fun func(messenger s7runtime.Messenger, dataFrame 
 			messenger.Reset(newMessenger)
 			i = i - 1
 		} else {
-			klog.V(2).InfoS("Failed to connect s7 server", "error", err)
+			logging.V(2).InfoS("Failed to connect s7 server", "error", err)
 		}
 	}
 	return s7runtime.ErrManyRetry

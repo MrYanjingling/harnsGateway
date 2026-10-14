@@ -1,7 +1,7 @@
 package model
 
 import (
-	opc "harnsgateway/pkg/protocol/opcua/runtime"
+	opc "github.com/MrYanjingling/harns-platform/pkg/protocol/opcua/runtime"
 )
 
 var _ OpcUaModeler = (*OpcUa)(nil)

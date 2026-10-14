@@ -4,10 +4,10 @@ import (
 	"container/list"
 	"context"
 	"fmt"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	opc "github.com/MrYanjingling/harns-platform/pkg/protocol/opcua/runtime"
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
-	opc "harnsgateway/pkg/protocol/opcua/runtime"
-	"k8s.io/klog/v2"
 	"sync"
 )
 
@@ -27,7 +27,7 @@ func (o *OpcUa) NewClients(address *opc.Address, dataFrameCount int) (*opc.Clien
 	// var endpoints []*ua.EndpointDescription
 	endpoints, err := opcua.GetEndpoints(context.Background(), endpoint)
 	if err != nil {
-		klog.V(2).InfoS("Failed to connect opc ua server")
+		logging.V(2).InfoS("Failed to connect opc ua server")
 		return nil, err
 	}
 	var ep *ua.EndpointDescription
@@ -51,11 +51,11 @@ func (o *OpcUa) NewClients(address *opc.Address, dataFrameCount int) (*opc.Clien
 		var err error
 		c, err = opcua.NewClient(endpoint, opts...)
 		if err != nil {
-			klog.V(2).InfoS("Failed to get opc ua client")
+			logging.V(2).InfoS("Failed to get opc ua client")
 			return nil, err
 		}
 		if err = c.Connect(context.Background()); err != nil {
-			klog.V(2).InfoS("Failed to connect opc ua server")
+			logging.V(2).InfoS("Failed to connect opc ua server")
 			return nil, err
 		}
 		m := &opc.UaClient{
@@ -77,10 +77,10 @@ func (o *OpcUa) NewClients(address *opc.Address, dataFrameCount int) (*opc.Clien
 			var err error
 			c, err = opcua.NewClient(endpoint, opcua.SecurityMode(ua.MessageSecurityModeNone))
 			if err != nil {
-				klog.V(2).InfoS("Failed to get opc ua client")
+				logging.V(2).InfoS("Failed to get opc ua client")
 			}
 			if err = c.Connect(context.Background()); err != nil {
-				klog.V(2).InfoS("Failed to connect opc ua server")
+				logging.V(2).InfoS("Failed to connect opc ua server")
 			}
 
 			return &opc.UaClient{

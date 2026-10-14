@@ -1,15 +1,15 @@
 package s7
 
 import (
-	s7runtime "harnsgateway/pkg/protocol/s7/runtime"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	"harnsgateway/pkg/utils/differenceutil"
-	"harnsgateway/pkg/utils/randutil"
-	"harnsgateway/pkg/utils/uuidutil"
-	v1 "harnsgateway/pkg/v1"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	s7runtime "github.com/MrYanjingling/harns-platform/pkg/protocol/s7/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/differenceutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/randutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/uuidutil"
+	v1 "github.com/MrYanjingling/harns-platform/pkg/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/klog/v2"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +21,7 @@ type S7DeviceManager struct {
 func (m *S7DeviceManager) CreateDevice(deviceType v1.DeviceType) (runtime.Device, error) {
 	s7Device, ok := deviceType.(*v1.S7Device)
 	if !ok {
-		klog.V(2).InfoS("Unsupported device,type not S7")
+		logging.V(2).InfoS("Unsupported device,type not S7")
 		return nil, constant.ErrDeviceType
 	}
 
@@ -84,7 +84,7 @@ func (m *S7DeviceManager) UpdateValidation(deviceType v1.DeviceType, device runt
 func (m *S7DeviceManager) UpdateDevice(id string, deviceType v1.DeviceType, device runtime.Device) (runtime.Device, error) {
 	s7Device, ok := deviceType.(*v1.S7Device)
 	if !ok {
-		klog.V(2).InfoS("Unsupported device,type not OpcUa")
+		logging.V(2).InfoS("Unsupported device,type not OpcUa")
 		return nil, constant.ErrDeviceType
 	}
 

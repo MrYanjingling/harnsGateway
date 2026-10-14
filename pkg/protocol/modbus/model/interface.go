@@ -1,8 +1,8 @@
 package model
 
 import (
-	modbus "harnsgateway/pkg/protocol/modbus/runtime"
-	"harnsgateway/pkg/runtime/constant"
+	modbus "github.com/MrYanjingling/harns-platform/pkg/protocol/modbus/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 )
 
 var _ ModbusModeler = (*ModbusTcp)(nil)

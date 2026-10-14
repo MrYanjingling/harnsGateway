@@ -1,6 +1,6 @@
 package runtime
 
-import opcuaruntime "harnsgateway/pkg/protocol/opcua/runtime"
+import opcuaruntime "github.com/MrYanjingling/harns-platform/pkg/protocol/opcua/runtime"
 
 type GroupVariables interface {
 	~*opcuaruntime.Variable

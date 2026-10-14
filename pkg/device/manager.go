@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/MrYanjingling/harns-platform/pkg/apis"
+	"github.com/MrYanjingling/harns-platform/pkg/apis/response"
+	"github.com/MrYanjingling/harns-platform/pkg/gateway"
+	"github.com/MrYanjingling/harns-platform/pkg/generic"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
+	v1 "github.com/MrYanjingling/harns-platform/pkg/v1"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"harnsgateway/pkg/apis"
-	"harnsgateway/pkg/apis/response"
-	"harnsgateway/pkg/gateway"
-	"harnsgateway/pkg/generic"
-	"harnsgateway/pkg/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	v1 "harnsgateway/pkg/v1"
-	"k8s.io/klog/v2"
 	"os"
 	"strings"
 	"sync"
@@ -69,7 +69,7 @@ func (m *Manager) Init() {
 				// 开启探测协程 15S一次
 				m.heartBeatDevices.Store(obj.GetID(), obj)
 			} else {
-				klog.V(2).InfoS("Failed to start process collect device data", "deviceId", obj.GetID())
+				logging.V(2).InfoS("Failed to start process collect device data", "deviceId", obj.GetID())
 			}
 		}
 	}
@@ -81,13 +81,13 @@ func (m *Manager) Init() {
 func (m *Manager) CreateDevice(object v1.DeviceType) (runtime.Device, error) {
 	device, err := m.deviceManager[object.GetDeviceType()].CreateDevice(object)
 	if err != nil {
-		klog.V(2).InfoS("Failed to create device", "error", err)
+		logging.V(2).InfoS("Failed to create device", "error", err)
 		return nil, err
 	}
 
 	created, err := m.store.Create(device)
 	if err != nil {
-		klog.V(2).InfoS("Failed to store device", "error", err)
+		logging.V(2).InfoS("Failed to store device", "error", err)
 		return nil, err
 	}
 	rd := created.(runtime.Device)
@@ -99,7 +99,7 @@ func (m *Manager) CreateDevice(object v1.DeviceType) (runtime.Device, error) {
 			// 开启探测协程 15S一次
 			m.heartBeatDevices.Store(rd.GetID(), rd)
 		} else {
-			klog.V(2).InfoS("Failed to start process collect device data", "deviceId", rd.GetID())
+			logging.V(2).InfoS("Failed to start process collect device data", "deviceId", rd.GetID())
 			return nil, err
 		}
 	}
@@ -119,19 +119,19 @@ func (m *Manager) DeleteDevice(id string, version string) (runtime.Device, error
 
 	d, err := m.deviceManager[device.GetDeviceType()].DeleteDevice(device)
 	if err != nil {
-		klog.V(2).InfoS("Failed to delete device", "error", err)
+		logging.V(2).InfoS("Failed to delete device", "error", err)
 		return nil, err
 	}
 
 	if _, err := m.store.Delete(d); err != nil {
-		klog.V(2).InfoS("Failed to delete device", "deviceId", device.GetID())
+		logging.V(2).InfoS("Failed to delete device", "deviceId", device.GetID())
 	}
 
-	klog.V(2).InfoS("Deleted device", "deviceId", device.GetID())
+	logging.V(2).InfoS("Deleted device", "deviceId", device.GetID())
 
 	go func() {
 		if err := m.cancelCollect(device); err != nil {
-			klog.V(2).InfoS("Failed to cancel collect process", "deviceId", device.GetID())
+			logging.V(2).InfoS("Failed to cancel collect process", "deviceId", device.GetID())
 		}
 	}()
 
@@ -158,13 +158,13 @@ func (m *Manager) UpdateDeviceById(id string, version string, newObj v1.DeviceTy
 
 	device, err := m.deviceManager[d.GetDeviceType()].UpdateDevice(id, newObj, cd)
 	if err != nil {
-		klog.V(2).InfoS("Failed to update device", "error", err)
+		logging.V(2).InfoS("Failed to update device", "error", err)
 		return nil, err
 	}
 
 	updated, err := m.store.Update(device)
 	if err != nil {
-		klog.V(2).InfoS("Failed to update device", "error", err)
+		logging.V(2).InfoS("Failed to update device", "error", err)
 		return nil, err
 	}
 	rd := updated.(runtime.Device)
@@ -219,11 +219,11 @@ func (m *Manager) GetDeviceById(id string, exploded bool) (runtime.Device, error
 
 func (m *Manager) SwitchDeviceStatus(id string, status string) error {
 	if _, err := m.GetDeviceById(id, true); err != nil {
-		klog.V(2).InfoS("Failed to find device", "deviceId", id)
+		logging.V(2).InfoS("Failed to find device", "deviceId", id)
 		return err
 	}
 	if _, ok := runtime.StringToDeviceStatusCh[status]; !ok {
-		klog.V(2).InfoS("Unsupported device status", "status", status)
+		logging.V(2).InfoS("Unsupported device status", "status", status)
 		return response.ErrDeviceOperatorUnSupported(status)
 	}
 	dsc := id + "-" + status
@@ -234,7 +234,7 @@ func (m *Manager) SwitchDeviceStatus(id string, status string) error {
 func (m *Manager) DeliverAction(id string, actions []map[string]interface{}) error {
 	device, err := m.GetDeviceById(id, true)
 	if err != nil {
-		klog.V(2).InfoS("Failed to find device", "deviceId", id)
+		logging.V(2).InfoS("Failed to find device", "deviceId", id)
 		return response.NewMultiError(response.ErrDeviceNotFound(id))
 	}
 
@@ -266,7 +266,7 @@ func (m *Manager) DeliverAction(id string, actions []map[string]interface{}) err
 	}
 
 	if device.GetCollectStatus() == runtime.CollectStatusToString[runtime.Unconnected] {
-		klog.V(2).InfoS("Failed to connect device", "deviceId", id)
+		logging.V(2).InfoS("Failed to connect device", "deviceId", id)
 		return response.NewMultiError(response.ErrDeviceNotConnect(id))
 	}
 
@@ -305,7 +305,7 @@ func (m *Manager) readyCollect(obj runtime.Device) error {
 		}
 	}
 	obj.SetCollectStatus(runtime.CollectStatusToString[runtime.Collecting])
-	klog.V(2).InfoS("Succeed to collect data", "deviceId", obj.GetID())
+	logging.V(2).InfoS("Succeed to collect data", "deviceId", obj.GetID())
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.brokers[obj.GetID()] = broker
@@ -348,18 +348,18 @@ func (m *Manager) readyCollect(obj runtime.Device) error {
 							marshal, _ := json.Marshal(publishData)
 							token := m.mqttClient.Publish(topic, 1, false, marshal)
 							if token.WaitTimeout(mqttTimeout) && token.Error() == nil {
-								klog.V(5).InfoS("Succeed to publish MQTT", "topic", topic, "data", publishData)
+								logging.V(5).InfoS("Succeed to publish MQTT", "topic", topic, "data", publishData)
 							} else {
-								klog.V(1).InfoS("Failed to publish MQTT", "topic", topic, "err", token.Error())
+								logging.V(1).InfoS("Failed to publish MQTT", "topic", topic, "err", token.Error())
 							}
 						} else {
 							v.(runtime.Device).SetCollectStatus(runtime.CollectStatusToString[runtime.CollectingError])
 						}
 					} else {
-						klog.V(2).InfoS("Failed to load device", "deviceId", deviceId)
+						logging.V(2).InfoS("Failed to load device", "deviceId", deviceId)
 					}
 				} else {
-					klog.V(2).InfoS("Stopped to collect data", "deviceId", deviceId)
+					logging.V(2).InfoS("Stopped to collect data", "deviceId", deviceId)
 					return
 				}
 			}
@@ -378,7 +378,7 @@ func (m *Manager) Shutdown(context context.Context) error {
 	for i := len(m.closers); i > 0; i-- {
 		lc := m.closers[i-1]
 		if err := lc.Closer(context); err != nil {
-			klog.V(2).InfoS("Failed to stopped Dependencies service", "service", lc.Label)
+			logging.V(2).InfoS("Failed to stopped Dependencies service", "service", lc.Label)
 			errs = append(errs, err.Error())
 		}
 	}
@@ -446,7 +446,7 @@ func (m *Manager) listeningDeviceStatusCh() {
 			status := split[1]
 			d, exist := m.devices.Load(deviceId)
 			if !exist {
-				klog.V(2).InfoS("Failed to find device", "deviceId", deviceId)
+				logging.V(2).InfoS("Failed to find device", "deviceId", deviceId)
 			}
 			m.switchDeviceStatus(d.(runtime.Device), status)
 		}
@@ -466,7 +466,7 @@ func (m *Manager) switchDeviceStatus(device runtime.Device, status string) {
 				if errors.Is(err, constant.ErrConnectDevice) {
 					m.heartBeatDevices.Store(device.GetID(), device)
 				} else {
-					klog.V(2).InfoS("Failed to start process collect device data", "deviceId", device.GetID())
+					logging.V(2).InfoS("Failed to start process collect device data", "deviceId", device.GetID())
 				}
 			}
 			return
@@ -482,7 +482,7 @@ func (m *Manager) switchDeviceStatus(device runtime.Device, status string) {
 				if errors.Is(err, constant.ErrConnectDevice) {
 					m.heartBeatDevices.Store(device.GetID(), device)
 				} else {
-					klog.V(2).InfoS("Failed to start process collect device data", "deviceId", device.GetID())
+					logging.V(2).InfoS("Failed to start process collect device data", "deviceId", device.GetID())
 				}
 			}
 			return
@@ -498,7 +498,7 @@ func (m *Manager) switchDeviceStatus(device runtime.Device, status string) {
 				if errors.Is(err, constant.ErrConnectDevice) {
 					m.heartBeatDevices.Store(device.GetID(), device)
 				} else {
-					klog.V(2).InfoS("Failed to start process collect device data", "deviceId", device.GetID())
+					logging.V(2).InfoS("Failed to start process collect device data", "deviceId", device.GetID())
 				}
 			}
 			return
@@ -513,7 +513,7 @@ func (m *Manager) switchDeviceStatus(device runtime.Device, status string) {
 				if errors.Is(err, constant.ErrConnectDevice) {
 					m.heartBeatDevices.Store(device.GetID(), device)
 				} else {
-					klog.V(2).InfoS("Failed to start process collect device data", "deviceId", device.GetID())
+					logging.V(2).InfoS("Failed to start process collect device data", "deviceId", device.GetID())
 				}
 			}
 			return

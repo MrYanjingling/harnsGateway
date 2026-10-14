@@ -1,6 +1,6 @@
 package v1
 
-import "harnsgateway/pkg/runtime/constant"
+import "github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
 
 // opcua
 type OpcUaVariable struct {

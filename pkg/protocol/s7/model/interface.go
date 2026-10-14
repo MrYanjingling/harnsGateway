@@ -1,7 +1,7 @@
 package model
 
 import (
-	s7 "harnsgateway/pkg/protocol/s7/runtime"
+	s7 "github.com/MrYanjingling/harns-platform/pkg/protocol/s7/runtime"
 )
 
 var _ S7Modeler = (*S71500)(nil)

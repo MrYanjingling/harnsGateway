@@ -25,7 +25,7 @@ func logger() gin.HandlerFunc {
 			path = path + "?" + raw
 		}
 
-		// klog.V(4).InfoS("Received HTTP request",
+		// logging.V(4).InfoS("Received HTTP request",
 		// 	"verb", c.Request.Method,
 		// 	"URI", path,
 		// 	"status", c.Writer.Status(),

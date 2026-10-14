@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"harnsgateway/pkg/utils/binutil"
-	"harnsgateway/pkg/utils/crcutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/crcutil"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 	}
 	sum := crcutil.CheckCrc16sum(bytes)
 	crc16 := make([]byte, 2)
-	binutil.WriteUint16(crc16, sum)
+	binutil.WriteUint16BigEndian(crc16, sum)
 	fmt.Println(crc16)
 	crc16Correct := []byte{0xC5, 0xCD}
 	fmt.Println(crc16Correct)

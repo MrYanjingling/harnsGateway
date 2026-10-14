@@ -1,7 +1,7 @@
 package fileutil
 
 import (
-	"harnsgateway/pkg/tsdb/fileutil"
+	"github.com/MrYanjingling/harns-platform/pkg/tsdb/fileutil"
 	"os"
 )
 

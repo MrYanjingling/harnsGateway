@@ -25,7 +25,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"harnsgateway/pkg/version"
+	"github.com/MrYanjingling/harns-platform/pkg/version"
 )
 
 type versionValue int

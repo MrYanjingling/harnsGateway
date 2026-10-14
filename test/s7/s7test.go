@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"harnsgateway/pkg/utils/binutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
 	"io"
 	"net"
 )

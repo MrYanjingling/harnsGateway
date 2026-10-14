@@ -2,8 +2,8 @@ package gateway
 
 import (
 	"fmt"
+	"github.com/MrYanjingling/harns-platform/pkg/apis"
 	"github.com/gin-gonic/gin"
-	"harnsgateway/pkg/apis"
 	"net/http"
 )
 

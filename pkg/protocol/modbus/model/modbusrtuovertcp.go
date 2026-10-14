@@ -3,11 +3,11 @@ package model
 import (
 	"container/list"
 	"fmt"
-	modbus "harnsgateway/pkg/protocol/modbus/runtime"
-	"harnsgateway/pkg/runtime/constant"
-	"harnsgateway/pkg/utils/binutil"
-	"harnsgateway/pkg/utils/crcutil"
-	"k8s.io/klog/v2"
+	"github.com/MrYanjingling/harns-platform/pkg/logging"
+	modbus "github.com/MrYanjingling/harns-platform/pkg/protocol/modbus/runtime"
+	"github.com/MrYanjingling/harns-platform/pkg/runtime/constant"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/binutil"
+	"github.com/MrYanjingling/harns-platform/pkg/utils/crcutil"
 	"net"
 	"sync"
 )
@@ -24,7 +24,7 @@ func (m *ModbusRtuOverTcp) NewClients(address *modbus.Address, dataFrameCount in
 	for i := 0; i < tcpChannel; i++ {
 		tunnel, err := net.Dial("tcp", addr)
 		if err != nil {
-			klog.V(2).InfoS("Failed to connect modbus server", "error", err)
+			logging.V(2).InfoS("Failed to connect modbus server", "error", err)
 			return nil, err
 		}
 		c := &modbus.TcpClient{
@@ -44,7 +44,7 @@ func (m *ModbusRtuOverTcp) NewClients(address *modbus.Address, dataFrameCount in
 		NewMessenger: func() (modbus.Messenger, error) {
 			tunnel, err := net.Dial("tcp", addr)
 			if err != nil {
-				klog.V(2).InfoS("Failed to connect modbus server", "error", err)
+				logging.V(2).InfoS("Failed to connect modbus server", "error", err)
 				return nil, err
 			}
 			return &modbus.TcpClient{

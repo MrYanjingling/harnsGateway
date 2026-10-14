@@ -16,7 +16,7 @@ package tsdbutil
 import (
 	"math"
 
-	"lightiot/pkg/tsdb/chunkenc"
+	"github.com/MrYanjingling/harns-platform/pkg/tsdb/chunkenc"
 )
 
 // BufferedSeriesIterator wraps an iterator with a look-back buffer.
