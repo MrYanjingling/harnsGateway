@@ -16,8 +16,8 @@ type Optioner interface {
 }
 
 type BaseOptions struct {
-	ConfigFile string `json:"-"`
-	Logging    LoggingConfiguration
+	ConfigFile string               `json:"-"`
+	Logging    LoggingConfiguration `json:"logging"`
 }
 
 func NewDefaultBaseOptions() BaseOptions {
@@ -32,17 +32,12 @@ func (bo *BaseOptions) GetBaseOptions() *BaseOptions {
 
 func (bo *BaseOptions) AddBaseFlags(cmd *cobra.Command, fs *pflag.FlagSet) {
 	bo.addConfigFile(fs)
-	bo.addLogging(fs)
 	addHelpAndUsage(cmd, fs)
 	addDefaultConfig(fs)
 }
 
 func (bo *BaseOptions) addConfigFile(fs *pflag.FlagSet) {
 	fs.StringVarP(&bo.ConfigFile, "config", "c", bo.ConfigFile, "The program will load its initial configuration from this file. The path may be absolute or relative; relative paths start at the program current working directory. Omit this flag to use the built-in default configuration values. Command-line flags override configuration from this file.")
-}
-
-func (bo *BaseOptions) addLogging(fs *pflag.FlagSet) {
-	bo.Logging.BindLoggingFlags(fs)
 }
 
 func (bo *BaseOptions) ValidateAndApply() error {
@@ -103,7 +98,6 @@ func flagPrecedence(o Optioner, args []string) error {
 	fs := pflag.NewFlagSet("", pflag.ExitOnError)
 	o.AddFlags(fs)
 	o.GetBaseOptions().addConfigFile(fs)
-	o.GetBaseOptions().addLogging(fs)
 
 	// re-parse flags
 	if err := fs.Parse(args); err != nil {

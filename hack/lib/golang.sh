@@ -49,6 +49,7 @@ harnsgateway::golang::host_platform() {
 harnsgateway::golang::sever_targets() {
   local targets=(
     cmd/gateway
+    cmd/platform
   )
   echo "${targets[@]}"
 }

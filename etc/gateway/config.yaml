@@ -30,4 +30,11 @@ logging:
   # Verbosity threshold for V(level) logs.
   verbosity: 2
   # Destination: "stderr", "stdout" or a file path.
-  output: stderr
+  # Leave empty to write to <binary dir>/../log/<service>.log.
+  output: "../log/harns-gateway.log"
+  # Log rotation (only applies when logging to a file).
+  max-size: 100     # maximum size in MB of a log file before rotation
+  max-backups: 7    # number of old log files to retain (0 = keep all)
+  max-age: 7        # days to retain old log files (0 = keep forever)
+  compress: true    # gzip rotated files
+  local-time: true  # use local time in rotated file names
