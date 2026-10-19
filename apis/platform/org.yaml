@@ -1,0 +1,176 @@
+openapi: 3.0.1
+info:
+  description: "API for managing organizations (departments). Tree only, no pagination."
+  version: "0.0.1"
+  title: "Platform Org API"
+servers:
+  - url: "/api/v1"
+tags:
+  - name: Org
+    description: Organization management.
+paths:
+  /iot/orgs/tree:
+    get:
+      tags: [Org]
+      summary: Get the organization tree.
+      operationId: treeOrgs
+      responses:
+        '200':
+          description: Organization tree (root nodes with children)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: success }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/OrgVo' }
+  /iot/orgs:
+    post:
+      tags: [Org]
+      summary: Create an organization.
+      operationId: createOrg
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrgReq' }
+      responses:
+        '200':
+          description: Created organization
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrgResult' }
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+  /iot/orgs/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Org]
+      summary: Get an organization by id.
+      operationId: getOrgById
+      responses:
+        '200':
+          description: The organization
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrgResult' }
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+    put:
+      tags: [Org]
+      summary: Update an organization.
+      operationId: updateOrgById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateOrgReq' }
+      responses:
+        '200':
+          description: Updated organization
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrgResult' }
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+    delete:
+      tags: [Org]
+      summary: Delete an organization (physical). Rejected if it has children; user bindings are removed in the same transaction.
+      operationId: deleteOrgById
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrgResult' }
+        '400':
+          description: Business error (e.g. has children)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+
+components:
+  schemas:
+    CreateOrgReq:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, maxLength: 64 }
+        name: { type: string, maxLength: 64 }
+        parentId: { type: string, description: "父ID，空/0 为根" }
+        sort: { type: integer, minimum: 0 }
+        description: { type: string, maxLength: 255 }
+        remark: { type: string, maxLength: 255 }
+        status: { type: string, enum: [enabled, disabled], default: enabled }
+    UpdateOrgReq:
+      type: object
+      properties:
+        code: { type: string, maxLength: 64 }
+        name: { type: string, maxLength: 64 }
+        parentId: { type: string }
+        sort: { type: integer, minimum: 0 }
+        description: { type: string, maxLength: 255 }
+        remark: { type: string, maxLength: 255 }
+        status: { type: string, enum: [enabled, disabled] }
+    OrgVo:
+      type: object
+      properties:
+        id: { type: string }
+        version: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+        parentId: { type: string }
+        sort: { type: integer }
+        description: { type: string }
+        remark: { type: string }
+        status: { type: string, enum: [enabled, disabled] }
+        createdUser: { type: string }
+        updatedUser: { type: string }
+        createdTime: { type: string, format: date-time }
+        updatedTime: { type: string, format: date-time }
+        children:
+          type: array
+          items: { $ref: '#/components/schemas/OrgVo' }
+    OrgResult:
+      type: object
+      properties:
+        code: { type: integer, example: 200 }
+        message: { type: string, example: success }
+        data: { $ref: '#/components/schemas/OrgVo' }
+    ErrorResult:
+      type: object
+      properties:
+        code: { type: integer, example: 10027 }
+        message: { type: string, example: "Organization [x] has sub organizations, cannot delete." }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: integer }
+              message: { type: string }

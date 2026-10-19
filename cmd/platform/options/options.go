@@ -14,6 +14,8 @@ import (
 
 	"harns-platform/cmd/platform/config"
 	baseoptions "harns-platform/pkg/generic/options"
+	"harns-platform/pkg/platform/audit"
+	"harns-platform/pkg/platform/auth"
 )
 
 type Options struct {
@@ -24,6 +26,8 @@ type Options struct {
 	Redis    RedisOptions         `json:"redis"`
 	MySQL    MySQLOptions         `json:"mysql"`
 	MinIO    MinIOOptions         `json:"minio"`
+	Security auth.Config          `json:"security"`
+	Audit    audit.Config         `json:"audit"`
 	baseoptions.BaseOptions
 }
 
@@ -87,6 +91,8 @@ func NewDefaultOptions() *Options {
 			Endpoint: _defaultMinIOEndpoint,
 			Bucket:   _defaultMinIOBucket,
 		},
+		Security: auth.DefaultConfig(),
+		Audit:    audit.DefaultConfig(),
 	}
 }
 
@@ -102,6 +108,8 @@ func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
 		CertFile:    o.CertFile,
 		KeyFile:     o.KeyFile,
 		MinIOBucket: o.MinIO.Bucket,
+		Security:    o.Security,
+		Audit:       o.Audit,
 	}
 
 	c.Redis = redis.NewUniversalClient(&redis.UniversalOptions{

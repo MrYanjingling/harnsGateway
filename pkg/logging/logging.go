@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"sync/atomic"
+	"time"
 )
 
 const DefaultVerbosity = 2
@@ -147,6 +148,18 @@ func Fatalf(format string, args ...interface{}) {
 
 // Flush is a no-op kept for API compatibility with klog.Flush.
 func Flush() {}
+
+// Trace logs a method entry at V(3) and returns a function that logs the exit
+// with elapsed time when deferred:
+//
+//	defer logging.Trace("identity.CreateUser", "userName", req.UserName)()
+func Trace(method string, kv ...interface{}) func() {
+	V(3).InfoS(method+" enter", kv...)
+	start := time.Now()
+	return func() {
+		V(3).InfoS(method+" exit", "cost", time.Since(start))
+	}
+}
 
 // Log format names accepted by NewLogger.
 const (

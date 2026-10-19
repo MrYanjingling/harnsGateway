@@ -29,8 +29,9 @@ type Result struct {
 
 // ErrorItem is a single localized error entry carried in Result.Errors.
 type ErrorItem struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 // OK builds a successful result.
@@ -88,8 +89,16 @@ func flatten(errs []error) []error {
 func localizeOne(lang string, err error) ErrorItem {
 	if re, ok := err.(*responseError); ok {
 		loc := re.Localized(lang)
-		return ErrorItem{Code: int(loc.Code), Message: loc.Message}
+		return ErrorItem{Code: int(loc.Code), Message: loc.Message, Data: loc.data}
 	}
 	// Unknown error types keep the raw message and use code 0.
 	return ErrorItem{Code: 0, Message: err.Error()}
+}
+
+// ErrorCode returns the business code of a response error, or 0 for other errors.
+func ErrorCode(err error) int {
+	if re, ok := err.(*responseError); ok && re != nil {
+		return int(re.Code)
+	}
+	return 0
 }

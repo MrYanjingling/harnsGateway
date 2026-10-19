@@ -21,6 +21,27 @@ const (
 	ErrCodeDeviceOperatorUnSupported          // 10015
 	ErrCodeTooManyJsonPatchOperations         // 10016
 	ErrCodeInternal                           // 10017
+	ErrCodeUserNotFound                       // 10018
+	ErrCodeUserNameExists                     // 10019
+	ErrCodeUserNoExists                       // 10020
+	ErrCodeVersionMismatch                    // 10021
+	ErrCodeRoleNotFound                       // 10022
+	ErrCodeRoleNameExists                     // 10023
+	ErrCodeRoleCodeExists                     // 10024
+	ErrCodeOrgNotFound                        // 10025
+	ErrCodeOrgCodeExists                      // 10026
+	ErrCodeOrgHasChildren                     // 10027
+	ErrCodeOrgParentNotFound                  // 10028
+	ErrCodeOrgParentCycle                     // 10029
+	ErrCodeLoginExpired                       // 10030
+	ErrCodeUnauthorized                       // 10031
+	ErrCodeUsernamePasswordError              // 10032
+	ErrCodeAccountDisabled                    // 10033
+	ErrCodeAccountLocked                      // 10034
+	ErrCodeLoginFailed                        // 10035
+	ErrCodeCaptchaEmpty                       // 10036
+	ErrCodeCaptchaExpired                     // 10037
+	ErrCodeCaptchaError                       // 10038
 )
 
 // !!! IMPORTANT PLEASE READ FIRST !!!

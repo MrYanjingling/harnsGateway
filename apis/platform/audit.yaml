@@ -1,0 +1,115 @@
+openapi: 3.0.1
+info:
+  description: "Audit log query API."
+  version: "0.0.1"
+  title: "Platform Audit API"
+servers:
+  - url: "/api/v1"
+tags:
+  - name: Audit
+    description: Audit logs.
+paths:
+  /iot/audit-logs:
+    get:
+      tags: [Audit]
+      summary: List audit logs (paged).
+      operationId: listAuditLogs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1, minimum: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 10, minimum: 1, maximum: 100 }
+        - name: app
+          in: query
+          schema: { type: string, example: iot }
+        - name: userId
+          in: query
+          schema: { type: string }
+        - name: path
+          in: query
+          description: Fuzzy match on path.
+          schema: { type: string }
+        - name: method
+          in: query
+          schema: { type: string, example: POST }
+        - name: resultCode
+          in: query
+          schema: { type: integer }
+        - name: start
+          in: query
+          description: Start time, "yyyy-MM-dd HH:mm:ss".
+          schema: { type: string }
+        - name: end
+          in: query
+          description: End time, "yyyy-MM-dd HH:mm:ss".
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paged audit logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: success }
+                  data:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      page: { type: integer }
+                      pageSize: { type: integer }
+                      list:
+                        type: array
+                        items: { $ref: '#/components/schemas/AuditLogVo' }
+        '401':
+          description: Login expired
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AuditLogVo:
+      type: object
+      properties:
+        id: { type: string }
+        app: { type: string, example: iot }
+        traceId: { type: string }
+        userId: { type: string }
+        userName: { type: string }
+        operationType: { type: string, enum: [LOGIN, LOGOUT, CREATE, UPDATE, DELETE, QUERY] }
+        operationDesc: { type: string }
+        method: { type: string }
+        path: { type: string }
+        query: { type: string }
+        ip: { type: string }
+        userAgent: { type: string }
+        requestBody: { type: string }
+        responseBody: { type: string }
+        status: { type: integer }
+        resultCode: { type: integer }
+        errorMsg: { type: string }
+        durationMs: { type: integer, format: int64 }
+        createdTime: { type: string, format: date-time }
+    ErrorResult:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: integer }
+              message: { type: string }

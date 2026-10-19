@@ -41,6 +41,33 @@ minio:
   use-ssl: false
   bucket: harns
 
+# Authentication (JWT + Redis session, RSA password decryption).
+security:
+  # HTTP header carrying the JWT.
+  token-header: Authorization
+  # HMAC signing secret, MUST be at least 32 bytes. Changing it invalidates all tokens.
+  token-secret: "please-change-me-32-bytes-or-more"
+  # Session lifetime in minutes (user expireTimes overrides it; negative = never expire).
+  expire-minutes: 60
+  # Refresh session TTL when remaining time is below this many minutes.
+  refresh-minutes: 10
+  # Lock the account after this many consecutive login failures.
+  max-login-failed: 5
+  # Lock duration in minutes; the account auto-unlocks after it.
+  lock-minutes: 60
+  # Enable RSA password decryption (key pair stored in MinIO).
+  rsa-enabled: true
+  # Captcha expiry in seconds.
+  captcha-ttl-seconds: 300
+
+# Audit log (write operations only; request/response bodies truncated and masked).
+audit:
+  enabled: true
+  # Max stored bytes for request/response bodies.
+  max-body-bytes: 16384
+  # Async queue size; logs are dropped when full.
+  queue-size: 1024
+
 # Logging configuration.
 logging:
   # Log format: "text" or "json".

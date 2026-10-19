@@ -1,0 +1,179 @@
+openapi: 3.0.1
+info:
+  description: "API for managing roles."
+  version: "0.0.1"
+  title: "Platform Role API"
+servers:
+  - url: "/api/v1"
+tags:
+  - name: Role
+    description: Role management.
+paths:
+  /iot/roles:
+    get:
+      tags: [Role]
+      summary: List roles (paged).
+      operationId: listRoles
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1, minimum: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 10, minimum: 1, maximum: 100 }
+        - name: keyword
+          in: query
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: Paged roles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: success }
+                  data:
+                    type: object
+                    properties:
+                      total: { type: integer, example: 1 }
+                      page: { type: integer, example: 1 }
+                      pageSize: { type: integer, example: 10 }
+                      list:
+                        type: array
+                        items: { $ref: '#/components/schemas/RoleVo' }
+    post:
+      tags: [Role]
+      summary: Create a role.
+      operationId: createRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRoleReq' }
+      responses:
+        '200':
+          description: Created role
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleResult' }
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+  /iot/roles/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Role]
+      summary: Get a role by id.
+      operationId: getRoleById
+      responses:
+        '200':
+          description: The role
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleResult' }
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+    put:
+      tags: [Role]
+      summary: Update a role.
+      operationId: updateRoleById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoleReq' }
+      responses:
+        '200':
+          description: Updated role
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleResult' }
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+    delete:
+      tags: [Role]
+      summary: Delete a role (physical). User bindings are removed in the same transaction.
+      operationId: deleteRoleById
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleResult' }
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+
+components:
+  schemas:
+    CreateRoleReq:
+      type: object
+      required: [name, code]
+      properties:
+        name: { type: string, maxLength: 64 }
+        code: { type: string, maxLength: 64 }
+        description: { type: string, maxLength: 255 }
+        status: { type: string, enum: [enabled, disabled], default: enabled }
+    UpdateRoleReq:
+      type: object
+      properties:
+        name: { type: string, maxLength: 64 }
+        code: { type: string, maxLength: 64 }
+        description: { type: string, maxLength: 255 }
+        status: { type: string, enum: [enabled, disabled] }
+    RoleVo:
+      type: object
+      properties:
+        id: { type: string }
+        version: { type: integer, format: int64 }
+        name: { type: string }
+        code: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [enabled, disabled] }
+        createdUser: { type: string }
+        updatedUser: { type: string }
+        createdTime: { type: string, format: date-time }
+        updatedTime: { type: string, format: date-time }
+    RoleResult:
+      type: object
+      properties:
+        code: { type: integer, example: 200 }
+        message: { type: string, example: success }
+        data: { $ref: '#/components/schemas/RoleVo' }
+    ErrorResult:
+      type: object
+      properties:
+        code: { type: integer, example: 10023 }
+        message: { type: string, example: "Role name [admin] already exists." }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: integer }
+              message: { type: string }

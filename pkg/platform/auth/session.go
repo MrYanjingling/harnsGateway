@@ -1,0 +1,86 @@
+package auth
+
+import (
+	"context"
+	"encoding/json"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+
+	identityv1 "harns-platform/pkg/platform/identity/v1"
+)
+
+const sessionKeyPrefix = "platform:login_tokens:"
+
+// Session is the server-side login state stored in Redis.
+type Session struct {
+	Token      string             `json:"token"`
+	User       *identityv1.UserVo `json:"user"`
+	LoginTime  int64              `json:"loginTime"`
+	ExpireTime int64              `json:"expireTime"`
+	TTLSeconds int64              `json:"ttlSeconds"`
+	IP         string             `json:"ip"`
+	UserAgent  string             `json:"userAgent"`
+}
+
+type sessionStore struct {
+	rdb     redis.UniversalClient
+	refresh time.Duration
+}
+
+func newSessionStore(rdb redis.UniversalClient, refreshMinutes int) *sessionStore {
+	return &sessionStore{
+		rdb:     rdb,
+		refresh: time.Duration(refreshMinutes) * time.Minute,
+	}
+}
+
+func sessionKey(token string) string {
+	return sessionKeyPrefix + token
+}
+
+func (s *sessionStore) Save(ctx context.Context, sess *Session, ttl time.Duration) error {
+	data, err := json.Marshal(sess)
+	if err != nil {
+		return err
+	}
+	if ttl < 0 {
+		ttl = 0
+	}
+	return s.rdb.Set(ctx, sessionKey(sess.Token), data, ttl).Err()
+}
+
+func (s *sessionStore) Get(ctx context.Context, token string) (*Session, error) {
+	data, err := s.rdb.Get(ctx, sessionKey(token)).Bytes()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	sess := &Session{}
+	if err := json.Unmarshal(data, sess); err != nil {
+		return nil, err
+	}
+	return sess, nil
+}
+
+func (s *sessionStore) Delete(ctx context.Context, token string) error {
+	return s.rdb.Del(ctx, sessionKey(token)).Err()
+}
+
+// RefreshIfNeeded extends the session TTL when the remaining time is below the
+// configured refresh threshold.
+func (s *sessionStore) RefreshIfNeeded(ctx context.Context, sess *Session) error {
+	if sess.TTLSeconds <= 0 || s.refresh <= 0 {
+		return nil
+	}
+	ttl, err := s.rdb.TTL(ctx, sessionKey(sess.Token)).Result()
+	if err != nil {
+		return err
+	}
+	if ttl > 0 && ttl < s.refresh {
+		return s.rdb.Expire(ctx, sessionKey(sess.Token), time.Duration(sess.TTLSeconds)*time.Second).Err()
+	}
+	return nil
+}

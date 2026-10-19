@@ -1,0 +1,183 @@
+openapi: 3.0.1
+info:
+  description: "Authentication API (JWT + Redis session, RSA password decryption). Protected requests echo an X-Trace-Id header for log correlation."
+  version: "0.0.1"
+  title: "Platform Auth API"
+servers:
+  - url: "/api/v1"
+tags:
+  - name: Auth
+    description: Authentication.
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with username and password.
+      description: |
+        The password may be RSA-encrypted (base64, PKCS1v15) using the key from /publicKey;
+        plain text is also accepted. On the 5th consecutive failure the account is locked
+        for 60 minutes and the response contains errors[0].data.unlockAt.
+        Captcha fields (code/key) are accepted but the captcha validation is disabled by default.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginReq' }
+      responses:
+        '200':
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: success }
+                  data: { $ref: '#/components/schemas/LoginResp' }
+        '400':
+          description: Business error (wrong credentials, disabled/locked account)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+  /auth/verificationCode:
+    post:
+      tags: [Auth]
+      summary: Generate a math captcha image.
+      description: |
+        Returns a captcha uuid and a base64 image. The answer is stored in Redis for 300 seconds.
+        Captcha validation in /login is currently disabled (commented out).
+      operationId: verificationCode
+      responses:
+        '200':
+          description: Captcha
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: success }
+                  data:
+                    type: object
+                    properties:
+                      uuid: { type: string }
+                      img: { type: string, description: Base64 encoded captcha image }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out (delete the server-side session).
+      operationId: logout
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: success }
+  /auth/index:
+    get:
+      tags: [Auth]
+      summary: Get the current user.
+      operationId: index
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: refresh
+          in: query
+          description: Reload the user from DB and write the fresh snapshot back to Redis.
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Current user (including roles and orgs)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: success }
+                  data: { $ref: '#/components/schemas/UserVo' }
+        '401':
+          description: Login expired
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResult' }
+  /auth/publicKey:
+    get:
+      tags: [Auth]
+      summary: Get the RSA public key (Base64 X.509 DER).
+      operationId: getPublicKey
+      responses:
+        '200':
+          description: Public key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: success }
+                  data: { type: string, example: "MIIBIjANBgkqh..." }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginReq:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, maxLength: 64 }
+        password:
+          type: string
+          maxLength: 512
+          description: Plain password or RSA-encrypted base64 ciphertext.
+        code:
+          type: string
+          description: Captcha answer (validation disabled by default).
+        key:
+          type: string
+          description: Captcha uuid from /verificationCode.
+    LoginResp:
+      type: object
+      properties:
+        token: { type: string }
+    UserVo:
+      type: object
+      properties:
+        id: { type: string }
+        version: { type: integer, format: int64 }
+        userName: { type: string }
+        userNo: { type: string }
+        nickName: { type: string }
+        status: { type: string, enum: [enabled, disabled] }
+        roleIds:
+          type: array
+          items: { type: string }
+        orgIds:
+          type: array
+          items: { type: string }
+    ErrorResult:
+      type: object
+      properties:
+        code: { type: integer, example: 10034 }
+        message: { type: string, example: "Account is locked." }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: integer }
+              message: { type: string }
+              data:
+                type: object
+                description: Extra error data. For account_locked, contains unlockAt (Unix milliseconds).
+                properties:
+                  unlockAt: { type: integer, format: int64, example: 1730000000000 }
