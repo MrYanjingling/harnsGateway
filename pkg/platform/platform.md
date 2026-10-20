@@ -219,7 +219,7 @@
   - 密码错 5 次 → 锁定 1 小时（`status=disabled`、`locked_until=+60m`）；锁定返回 `errors[0].data.unlockAt`（Unix 毫秒）。
   - 会话 TTL 默认 60 分钟（用户 `expireTimes` 覆盖；<0 永不过期）；剩余 <10 分钟时在 filter 中滑动续期。
   - JWT 只含 `login_user`(会话UUID)/`sub`/`iat`，不设 `exp`；`token-secret` ≥32 字节。
-  - RSA：启动时在 MinIO 检查 `login-rsa-private.pem`/`login-rsa-public.pem`，缺失才生成；MinIO 不可达 → 启动失败；解密用 PKCS1v15，失败按明文。
+  - RSA：启动时在 MinIO 检查 `login-rsa-private.pem`/`login-rsa-public.pem`，缺失才生成；MinIO 不可达 → 启动失败；解密用 **OAEP(SHA-256)**，失败按明文。
   - 验证码：生成后存 Redis `platform:captcha:<uuid>`（TTL `captcha-ttl-seconds`，默认 300s）；**登录中的校验默认注释未启用**（`auth/service.go` 的 login）。
   - Trace：由 `httpx.Trace()` 独立处理（`X-Trace-Id` 生成/回写 + 请求结果日志），与认证解耦；`auth.Auth()` 只管认证。
   - 上下文：认证成功后把**完整用户**（`identity/v1.UserVo`，含 roles/orgs）注入 `c.Request.Context()`；业务层用 `principal.UserID(ctx)` / `principal.FromContext(ctx)` 取用户信息（见 §9.4）。

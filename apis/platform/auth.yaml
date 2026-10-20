@@ -14,7 +14,7 @@ paths:
       tags: [Auth]
       summary: Log in with username and password.
       description: |
-        The password may be RSA-encrypted (base64, PKCS1v15) using the key from /publicKey;
+        The password may be RSA-OAEP(SHA-256) encrypted (base64) using the key from /publicKey;
         plain text is also accepted. On the 5th consecutive failure the account is locked
         for 60 minutes and the response contains errors[0].data.unlockAt.
         Captcha fields (code/key) are accepted but the captcha validation is disabled by default.

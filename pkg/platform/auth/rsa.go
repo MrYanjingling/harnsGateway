@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -194,13 +195,13 @@ func (m *rsaManager) PublicKeyBase64() string {
 	return m.publicB64
 }
 
-// Decrypt decrypts a base64 encoded RSA/PKCS1v15 ciphertext.
+// Decrypt decrypts a base64 encoded RSA-OAEP(SHA-256) ciphertext.
 func (m *rsaManager) Decrypt(ciphertextB64 string) (string, error) {
 	ciphertext, err := base64.StdEncoding.DecodeString(ciphertextB64)
 	if err != nil {
 		return "", err
 	}
-	plain, err := rsa.DecryptPKCS1v15(rand.Reader, m.privateKey, ciphertext)
+	plain, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, m.privateKey, ciphertext, nil)
 	if err != nil {
 		return "", err
 	}
