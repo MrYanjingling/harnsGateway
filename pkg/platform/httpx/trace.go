@@ -1,8 +1,12 @@
 package httpx
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"harns-platform/pkg/logging"
 )
 
 const (
@@ -11,8 +15,8 @@ const (
 	TraceHeader = "X-Trace-Id"
 )
 
-// Trace assigns (or reuses) a trace id for the request and echoes it back in
-// the response header.
+// Trace assigns (or reuses) a trace id for the request, echoes it back in the
+// response header and records the request outcome.
 func Trace() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		traceID := c.GetHeader(TraceHeader)
@@ -21,7 +25,18 @@ func Trace() gin.HandlerFunc {
 		}
 		c.Set(traceContextKey, traceID)
 		c.Header(TraceHeader, traceID)
+
+		start := time.Now()
 		c.Next()
+
+		logging.V(3).InfoS("http request",
+			"traceId", traceID,
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"status", c.Writer.Status(),
+			"ip", c.ClientIP(),
+			"cost", time.Since(start),
+		)
 	}
 }
 

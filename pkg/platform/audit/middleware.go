@@ -44,7 +44,11 @@ func (s *Service) Middleware() gin.HandlerFunc {
 		if app == "" {
 			app = "platform"
 		}
-		p, _ := principal.FromContext(c.Request.Context())
+		user, _ := principal.FromContext(c.Request.Context())
+		userID, userName := "", ""
+		if user != nil {
+			userID, userName = user.ID, user.UserName
+		}
 
 		resultCode, errorMsg := parseResult(cw.body.Bytes(), cw.truncated)
 
@@ -61,8 +65,8 @@ func (s *Service) Middleware() gin.HandlerFunc {
 			ID:            ulid.Make().String(),
 			App:           app,
 			TraceID:       httpx.TraceID(c),
-			UserID:        p.UserID,
-			UserName:      p.UserName,
+			UserID:        userID,
+			UserName:      userName,
 			OperationType: op.Type,
 			OperationDesc: op.Desc,
 			Method:        c.Request.Method,

@@ -3,81 +3,50 @@ package auth
 import (
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"harns-platform/pkg/apis/response"
-	"harns-platform/pkg/logging"
-	"harns-platform/pkg/platform/httpx"
 	"harns-platform/pkg/platform/principal"
 )
 
 const sessionContextKey = "auth.session"
 
 // Auth authenticates the request via JWT + Redis session, performs sliding
-// expiry refresh and injects the principal into the request context.
+// expiry refresh and injects the authenticated user into the request context.
 func (s *Service) Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		traceID := httpx.TraceID(c)
-		start := time.Now()
-		method := c.Request.Method
-		path := c.Request.URL.Path
-		ip := c.ClientIP()
-
-		logging.V(3).InfoS("auth enter",
-			"traceId", traceID, "method", method, "path", path, "ip", ip)
-
-		fail := func(reason string) {
-			logging.V(2).InfoS("auth token validation failed",
-				"traceId", traceID, "method", method, "path", path, "ip", ip,
-				"reason", reason, "cost", time.Since(start))
-			response.WriteError(c, http.StatusUnauthorized, response.ErrLoginExpired())
-			c.Abort()
-		}
-
 		token := extractToken(c.GetHeader(s.cfg.TokenHeader))
 		if token == "" {
-			fail("missing token")
+			response.WriteError(c, http.StatusUnauthorized, response.ErrLoginExpired())
+			c.Abort()
 			return
 		}
 
-		sessionID, userID, err := s.jwt.Parse(token)
+		sessionID, _, err := s.jwt.Parse(token)
 		if err != nil {
-			fail("invalid jwt")
+			response.WriteError(c, http.StatusUnauthorized, response.ErrLoginExpired())
+			c.Abort()
 			return
 		}
 
 		sess, err := s.sessions.Get(c.Request.Context(), sessionID)
-		if err != nil {
-			fail("session store error")
+		if err != nil || sess == nil {
+			response.WriteError(c, http.StatusUnauthorized, response.ErrLoginExpired())
+			c.Abort()
 			return
-		}
-		if sess == nil {
-			fail("session not found")
-			return
-		}
-
-		if userID == "" && sess.User != nil {
-			userID = sess.User.ID
 		}
 
 		if err := s.sessions.RefreshIfNeeded(c.Request.Context(), sess); err != nil {
-			fail("session refresh error")
+			response.WriteError(c, http.StatusUnauthorized, response.ErrLoginExpired())
+			c.Abort()
 			return
 		}
 
 		c.Set(sessionContextKey, sess)
 		if sess.User != nil {
-			ctx := principal.With(c.Request.Context(), principal.Principal{
-				UserID:   sess.User.ID,
-				UserName: sess.User.UserName,
-			})
-			c.Request = c.Request.WithContext(ctx)
+			c.Request = c.Request.WithContext(principal.With(c.Request.Context(), sess.User))
 		}
-		logging.V(3).InfoS("auth token validated",
-			"traceId", traceID, "userId", userID, "method", method, "path", path, "ip", ip,
-			"cost", time.Since(start))
 		c.Next()
 	}
 }

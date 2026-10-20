@@ -43,10 +43,7 @@ func (s *Service) Login(c *gin.Context) {
 		return
 	}
 	if user != nil {
-		ctx := principal.With(c.Request.Context(), principal.Principal{
-			UserID:   user.ID,
-			UserName: user.UserName,
-		})
+		ctx := principal.With(c.Request.Context(), user)
 		c.Request = c.Request.WithContext(ctx)
 	}
 	response.WriteOK(c, loginResp{Token: token})

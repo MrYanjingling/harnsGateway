@@ -221,8 +221,8 @@
   - JWT 只含 `login_user`(会话UUID)/`sub`/`iat`，不设 `exp`；`token-secret` ≥32 字节。
   - RSA：启动时在 MinIO 检查 `login-rsa-private.pem`/`login-rsa-public.pem`，缺失才生成；MinIO 不可达 → 启动失败；解密用 PKCS1v15，失败按明文。
   - 验证码：生成后存 Redis `platform:captcha:<uuid>`（TTL `captcha-ttl-seconds`，默认 300s）；**登录中的校验默认注释未启用**（`auth/service.go` 的 login）。
-  - Trace：鉴权中间件优先使用请求头 `X-Trace-Id`，缺失则生成 UUID 并回写响应头；日志带 `traceId`、method/path/ip、校验结果与 `cost`（成功 V(3)，失败 V(2)）。
-  - 上下文：鉴权成功后把 `principal{UserID,UserName}` 注入 `c.Request.Context()`；业务层用 `principal.UserID(ctx)` 写 `createdUser`/`updatedUser`（见 §9.4）。
+  - Trace：由 `httpx.Trace()` 独立处理（`X-Trace-Id` 生成/回写 + 请求结果日志），与认证解耦；`auth.Auth()` 只管认证。
+  - 上下文：认证成功后把**完整用户**（`identity/v1.UserVo`，含 roles/orgs）注入 `c.Request.Context()`；业务层用 `principal.UserID(ctx)` / `principal.FromContext(ctx)` 取用户信息（见 §9.4）。
 - 约束：遵循 §3~§9；受保护接口（users/roles/orgs）挂鉴权中间件；`health`/login/logout/publicKey 放行。
 - 错误码：`10030 login_expired(401)`、`10031 unauthorized(401)`、`10032 username_password_error(400)`、`10033 account_disabled(400)`、`10034 account_locked(400)`、`10035 login_failed(500)`。
 - 验收标准：
