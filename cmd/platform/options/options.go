@@ -14,11 +14,13 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"harns-platform/cmd/platform/config"
+	"harns-platform/pkg/audit"
+	"harns-platform/pkg/generic"
 	baseoptions "harns-platform/pkg/generic/options"
-	"harns-platform/pkg/platform/audit"
+	"harns-platform/pkg/logging"
 	"harns-platform/pkg/platform/auth"
-	"harns-platform/pkg/platform/httpx"
 	"harns-platform/pkg/platform/migrate"
+	"harns-platform/pkg/telemetry"
 )
 
 type Options struct {
@@ -30,9 +32,12 @@ type Options struct {
 	MySQL    MySQLOptions         `json:"mysql"`
 	MinIO    MinIOOptions         `json:"minio"`
 	Security auth.Config          `json:"security"`
-	CORS     httpx.CORSConfig     `json:"cors"`
+	CORS     generic.CORSConfig   `json:"cors"`
 	Audit    audit.Config         `json:"audit"`
-	Migrate  bool                 `json:"migrate"`
+	// Migrate runs the embedded database migrations on startup. Default: true.
+	Migrate      bool             `json:"migrate"`
+	MaxBodyBytes int64            `json:"max-body-bytes"`
+	Telemetry    telemetry.Config `json:"telemetry"`
 	baseoptions.BaseOptions
 }
 
@@ -66,18 +71,19 @@ type MinIOOptions struct {
 }
 
 const (
-	_defaultPort                        = "32300"
-	_defaultWait                        = baseoptions.Duration(15 * time.Second)
-	_defaultConfigFile                  = "/etc/platform/config.yaml"
-	_defaultMySQLHost                   = "127.0.0.1"
-	_defaultMySQLPort                   = 3306
-	_defaultMySQLCharset                = "utf8mb4"
-	_defaultMySQLMaxOpenConns           = 50
-	_defaultMySQLMaxIdleConns           = 10
-	_defaultMySQLConnMaxLifetimeMinutes = 30
-	_defaultRedisTimeoutSeconds         = 3
-	_defaultMinIOEndpoint               = "127.0.0.1:9000"
-	_defaultMinIOBucket                 = "harns"
+	_defaultPort                              = "32300"
+	_defaultWait                              = baseoptions.Duration(15 * time.Second)
+	_defaultConfigFile                        = "/etc/platform/config.yaml"
+	_defaultMySQLHost                         = "127.0.0.1"
+	_defaultMySQLPort                         = 3306
+	_defaultMySQLCharset                      = "utf8mb4"
+	_defaultMySQLMaxOpenConns                 = 50
+	_defaultMySQLMaxIdleConns                 = 10
+	_defaultMySQLConnMaxLifetimeMinutes       = 30
+	_defaultRedisTimeoutSeconds               = 3
+	_defaultMinIOEndpoint                     = "127.0.0.1:9000"
+	_defaultMinIOBucket                       = "harns"
+	_defaultMaxBodyBytes                int64 = 1 << 20
 )
 
 var (
@@ -110,10 +116,12 @@ func NewDefaultOptions() *Options {
 			Endpoint: _defaultMinIOEndpoint,
 			Bucket:   _defaultMinIOBucket,
 		},
-		Security: auth.DefaultConfig(),
-		CORS:     httpx.DefaultCORSConfig(),
-		Audit:    audit.DefaultConfig(),
-		Migrate:  true,
+		Security:     auth.DefaultConfig(),
+		CORS:         generic.DefaultCORSConfig(),
+		Audit:        audit.DefaultConfig(),
+		Migrate:      true,
+		MaxBodyBytes: _defaultMaxBodyBytes,
+		Telemetry:    telemetry.DefaultConfig(),
 	}
 }
 
@@ -126,12 +134,13 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
 	c := &config.Config{
-		CertFile:    o.CertFile,
-		KeyFile:     o.KeyFile,
-		MinIOBucket: o.MinIO.Bucket,
-		Security:    o.Security,
-		CORS:        o.CORS,
-		Audit:       o.Audit,
+		CertFile:     o.CertFile,
+		KeyFile:      o.KeyFile,
+		MinIOBucket:  o.MinIO.Bucket,
+		Security:     o.Security,
+		CORS:         o.CORS,
+		Audit:        o.Audit,
+		MaxBodyBytes: o.MaxBodyBytes,
 	}
 
 	c.Redis = redis.NewUniversalClient(&redis.UniversalOptions{
@@ -167,12 +176,16 @@ func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
 	c.DB = db
 
 	if o.Migrate {
+		logging.V(1).InfoS("Running database migrations", "database", o.MySQL.Database)
 		migCtx, cancelMig := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancelMig()
 		if err := migrate.Run(migCtx, dsn); err != nil {
 			_ = db.Close()
 			return nil, fmt.Errorf("run migrations failed: %w", err)
 		}
+		logging.V(1).InfoS("Database migrations completed", "database", o.MySQL.Database)
+	} else {
+		logging.Warnf("Automatic database migrations are disabled (migrate: false)")
 	}
 
 	minioClient, err := minio.New(o.MinIO.Endpoint, &minio.Options{
@@ -184,6 +197,14 @@ func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
 		return nil, err
 	}
 	c.MinIO = minioClient
+	c.Telemetry = o.Telemetry
+
+	shutdown, err := telemetry.Setup(context.Background(), o.Telemetry)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	c.TelemetryShutdown = shutdown
 
 	return c, nil
 }

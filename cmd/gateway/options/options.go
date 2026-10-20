@@ -9,6 +9,7 @@ import (
 	"harns-platform/pkg/gateway/device"
 	"harns-platform/pkg/gateway/registry"
 	"harns-platform/pkg/gateway/storage"
+	"harns-platform/pkg/generic"
 	baseoptions "harns-platform/pkg/generic/options"
 	"harns-platform/pkg/logging"
 	"time"
@@ -22,16 +23,19 @@ type Options struct {
 	MqttPassword   string               `json:"mqtt-password"`
 	CertFile       string               `json:"cert-file"`
 	KeyFile        string               `json:"key-file"`
+	MaxBodyBytes   int64                `json:"max-body-bytes"`
+	CORS           generic.CORSConfig   `json:"cors"`
 	baseoptions.BaseOptions
 	// logs.BaseOptions
 }
 
 const (
-	_defaultPort         = "32200"
-	_defaultWait         = baseoptions.Duration(15 * time.Second)
-	_defaultMqttUsername = ""
-	_defaultMqttPassword = ""
-	_defaultConfigFile   = "/etc/gateway/config.yaml"
+	_defaultPort               = "32200"
+	_defaultWait               = baseoptions.Duration(15 * time.Second)
+	_defaultMqttUsername       = ""
+	_defaultMqttPassword       = ""
+	_defaultConfigFile         = "/etc/gateway/config.yaml"
+	_defaultMaxBodyBytes int64 = 10 << 20
 )
 
 var (
@@ -50,6 +54,8 @@ func NewDefaultOptions() *Options {
 		BaseOptions:    base,
 		CertFile:       "",
 		KeyFile:        "",
+		MaxBodyBytes:   _defaultMaxBodyBytes,
+		CORS:           generic.DefaultCORSConfig(),
 		// BaseOptions: logs.NewOptions(),
 	}
 }
@@ -66,7 +72,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 }
 
 func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
-	c := &config.Config{}
+	c := &config.Config{MaxBodyBytes: o.MaxBodyBytes, CORS: o.CORS}
 	gatewayMgr := gateway.NewGatewayManager(stopCh)
 	gatewayMgr.Init()
 	c.GatewayMgr = gatewayMgr

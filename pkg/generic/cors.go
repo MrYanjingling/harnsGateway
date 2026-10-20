@@ -1,4 +1,4 @@
-package httpx
+package generic
 
 import (
 	"net/http"
@@ -23,8 +23,8 @@ func DefaultCORSConfig() CORSConfig {
 	return CORSConfig{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
-		AllowedHeaders: []string{"Authorization", "Content-Type", TraceHeader},
-		ExposeHeaders:  []string{TraceHeader},
+		AllowedHeaders: []string{"Authorization", "Content-Type", "X-Trace-Id"},
+		ExposeHeaders:  []string{"X-Trace-Id"},
 		MaxAgeSeconds:  3600,
 	}
 }

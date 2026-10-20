@@ -1,0 +1,65 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: harns123456
+      MYSQL_DATABASE: harns
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pharns123456 --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: harns
+      MINIO_ROOT_PASSWORD: harns123456
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  platform:
+    build:
+      context: .
+      args:
+        SERVICE: platform
+    command: ["-c", "/etc/harns/platform.yaml"]
+    ports:
+      - "32300:32300"
+    volumes:
+      - ./etc/platform/config.docker.yaml:/etc/harns/platform.yaml:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:32300/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mysql-data:
+  minio-data:

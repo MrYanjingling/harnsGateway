@@ -1,5 +1,5 @@
 -- Bootstrap super administrator role and account.
--- Default account: admin / admin@123 (please change it after first login).
+-- Default account: admin / admin@qwer (please change it after first login).
 -- Role code "admin" is the reserved super administrator role code.
 
 INSERT IGNORE INTO `roles`
@@ -13,7 +13,7 @@ INSERT IGNORE INTO `users`
    `created_user`, `updated_user`, `created_time`, `updated_time`)
 VALUES
   ('00000000000000000000000000000002', 0, 'admin',
-   '$2a$10$HD89t3VpmaKpkME25v5e/.aCwFycTmNPY6tz8WxNJZXQYqMVvNIzW',
+   '$2a$10$W10HQX2IKw45wiiHcRCPeO0nubzdIa1gZk36SxCDO1xDpnHzdMjpC',
    'admin', '超级管理员', NULL, '', '', '', '', '', 'local', NULL, 0, NULL, 0, 'enabled',
    'system', 'system', NOW(), NOW());
 

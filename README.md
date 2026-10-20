@@ -75,12 +75,14 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 - Auth (shared): `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`,
   `GET /api/v1/auth/index`, `GET /api/v1/auth/publicKey`,
   `POST /api/v1/auth/verificationCode`
-- IoT (`app=iot`): `/api/v1/iot/users`, `/roles`, `/orgs`, `/audit-logs`
-- Probes: `GET /api/v1/health`, `GET /api/v1/ready`
+- IoT (`app=IOT`): `/api/v1/iot/users`, `/roles`, `/orgs`, `/auditLogs`
+- Probes: `GET /api/v1/health`, `GET /api/v1/ready` (DB, Redis and MinIO)
+- Docs: `GET /swagger`, `GET /api/v1/openapi`, `GET /api/v1/openapi/{file}`
+- Ops: `GET /metrics` (Prometheus), `GET /debug/pprof/`
 
 ### Auth
 
-- A super administrator role (`code=admin`) and account `admin / admin@123` are seeded by
+- A super administrator role (`code=admin`) and account `admin / admin@qwer` are seeded by
   migration; change the password after first login.
 - JWT (HS256) + Redis session; password may be RSA-OAEP(SHA-256) encrypted.
 - Account locks for 60 minutes after 5 consecutive failures.
@@ -88,7 +90,27 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 ### Audit
 
 - Write operations only; request/response bodies are masked and truncated (16KB).
-- Logs are retained for `audit.retention-days` (default 180 days).
+- Logs are written asynchronously in batches (`audit.batch-size`, default 100;
+  `audit.flush-interval-ms`, default 1000) and retained for
+  `audit.retention-days` (default 180 days), with cleanup batched via
+  `audit.cleanup-batch-size`.
+- `app` identifies the source service: `IOT`, `EMS` or `EAM`. EMS/EAM use the
+  same shared audit module with their own `app`.
+
+Other Go services in this repo can use `pkg/audit` directly:
+
+```go
+cfg := audit.DefaultConfig()
+m := audit.NewModule(db, cfg, audit.AppEMS)
+defer m.Close(ctx)
+
+_ = m.Record(ctx, audit.Event{OperationType: audit.OpCreate, Path: "/api/v1/ems/..."})
+list, total, err := m.List(ctx, audit.Query{PageSize: 20})
+```
+
+Only the platform owns migrations and retention cleanup. Install `generic.Trace()`
+and call `generic.SetTraceHeader(ctx, req)` for outbound calls so records from
+different services share the same `traceId`.
 
 ### Development
 
@@ -98,3 +120,15 @@ make lint    # gofmt + go vet (tsdb excluded)
 make test    # go test
 make package # build + zip binaries and etc/ config
 ```
+
+### Docker
+
+```bash
+docker compose up --build
+# platform: http://127.0.0.1:32300
+# swagger:  http://127.0.0.1:32300/swagger
+# minio:    http://127.0.0.1:9001
+```
+
+The compose stack starts MySQL, Redis, MinIO and the platform. Override the
+default credentials and `security.token-secret` before using it anywhere real.

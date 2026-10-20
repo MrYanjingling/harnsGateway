@@ -6,8 +6,8 @@ import (
 	"harns-platform/pkg/apis"
 )
 
-// Log is a persisted audit log entry.
-type Log struct {
+// Event is a persisted audit log entry.
+type Event struct {
 	ID            string    `json:"id"`
 	App           string    `json:"app"`
 	TraceID       string    `json:"traceId"`
@@ -29,8 +29,8 @@ type Log struct {
 	CreatedTime   time.Time `json:"createdTime"`
 }
 
-// ListQuery is the audit log query.
-type ListQuery struct {
+// Query is the audit log query.
+type Query struct {
 	apis.PageQuery
 	App        string `json:"app" form:"app"`
 	UserID     string `json:"userId" form:"userId"`
@@ -39,4 +39,10 @@ type ListQuery struct {
 	ResultCode *int   `json:"resultCode" form:"resultCode"`
 	Start      string `json:"start" form:"start"`
 	End        string `json:"end" form:"end"`
+}
+
+// Normalize applies paging defaults and canonicalizes the app value.
+func (q *Query) Normalize() {
+	q.PageQuery.Normalize()
+	q.App = normalizeApp(q.App)
 }

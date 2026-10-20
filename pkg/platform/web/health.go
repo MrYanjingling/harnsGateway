@@ -11,19 +11,21 @@ import (
 	"harns-platform/pkg/apis/response"
 )
 
-const maxRequestBodyBytes int64 = 1 << 20
-
-// readiness checks database and redis connectivity.
+// readiness checks database, redis and minio connectivity.
 func readiness(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
-		defer cancel()
+		checkCtx := func() (context.Context, context.CancelFunc) {
+			return context.WithTimeout(c.Request.Context(), 2*time.Second)
+		}
 
 		checks := gin.H{}
 		ok := true
 
 		if cfg.DB != nil {
-			if err := cfg.DB.PingContext(ctx); err != nil {
+			ctx, cancel := checkCtx()
+			err := cfg.DB.PingContext(ctx)
+			cancel()
+			if err != nil {
 				checks["db"] = "down"
 				ok = false
 			} else {
@@ -34,7 +36,10 @@ func readiness(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		if cfg.Redis != nil {
-			if err := cfg.Redis.Ping(ctx).Err(); err != nil {
+			ctx, cancel := checkCtx()
+			err := cfg.Redis.Ping(ctx).Err()
+			cancel()
+			if err != nil {
 				checks["redis"] = "down"
 				ok = false
 			} else {
@@ -42,6 +47,20 @@ func readiness(cfg *config.Config) gin.HandlerFunc {
 			}
 		} else {
 			checks["redis"] = "disabled"
+		}
+
+		if cfg.MinIO != nil && cfg.Security.RSAEnabled {
+			ctx, cancel := checkCtx()
+			_, err := cfg.MinIO.BucketExists(ctx, cfg.MinIOBucket)
+			cancel()
+			if err != nil {
+				checks["minio"] = "down"
+				ok = false
+			} else {
+				checks["minio"] = "ok"
+			}
+		} else {
+			checks["minio"] = "disabled"
 		}
 
 		if ok {

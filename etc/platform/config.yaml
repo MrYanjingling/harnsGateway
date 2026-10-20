@@ -12,6 +12,9 @@ port: "32300"
 # before shutting down (e.g. 15s, 1m).
 graceful-timeout: 15s
 
+# Maximum request body size in bytes (1 MiB).
+max-body-bytes: 1048576
+
 # TLS certificates. Leave both empty to serve plain HTTP.
 cert-file: ""
 key-file: ""
@@ -87,6 +90,12 @@ audit:
   queue-size: 1024
   # Keep audit logs for this many days (6 months = 180).
   retention-days: 180
+  # Number of rows deleted per batch during cleanup.
+  cleanup-batch-size: 1000
+  # Number of audit logs written per INSERT batch (max 500).
+  batch-size: 100
+  # Max delay before flushing a partial batch, in milliseconds.
+  flush-interval-ms: 1000
 
 # Logging configuration.
 logging:
@@ -103,3 +112,11 @@ logging:
   max-age: 7        # days to retain old log files (0 = keep forever)
   compress: true    # gzip rotated files
   local-time: true  # use local time in rotated file names
+
+# OpenTelemetry tracing. Disabled by default; set enabled: true and point
+# endpoint at an OTLP/HTTP collector (e.g. otel-collector:4318).
+telemetry:
+  enabled: false
+  endpoint: localhost:4318
+  insecure: true
+  service-name: harns-platform

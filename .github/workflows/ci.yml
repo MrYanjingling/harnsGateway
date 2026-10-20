@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+      - name: Download modules
+        run: go mod download
+      - name: Check formatting
+        run: |
+          files=$(gofmt -l $(git ls-files '*.go'))
+          if [ -n "$files" ]; then echo "gofmt needed:"; echo "$files"; exit 1; fi
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./cmd/... ./pkg/platform/... ./pkg/generic/... ./pkg/metrics/... ./pkg/telemetry/... ./apis/...
+      - name: Test
+        run: go test -vet=off ./cmd/... ./pkg/platform/... ./pkg/generic/... ./pkg/metrics/... ./pkg/telemetry/... ./apis/...

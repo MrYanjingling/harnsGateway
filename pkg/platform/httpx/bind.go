@@ -47,6 +47,13 @@ func BindQuery(c *gin.Context, obj interface{}) bool {
 }
 
 func writeBindError(c *gin.Context, err error) {
+	var maxBytesErr *http.MaxBytesError
+	if errors.As(err, &maxBytesErr) {
+		response.WriteError(c, http.StatusRequestEntityTooLarge, response.ErrRequestBody)
+		c.Abort()
+		return
+	}
+
 	var ves validator.ValidationErrors
 	if errors.As(err, &ves) {
 		lang := i18n.Lang(c)

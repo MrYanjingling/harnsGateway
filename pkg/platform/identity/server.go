@@ -97,7 +97,7 @@ func deleteUserById(svc *Service) gin.HandlerFunc {
 	}
 }
 
-// resetUserPassword 将用户密码重置为「用户名+@123」。
+// resetUserPassword 将用户密码重置为「用户名+@qwer」。
 func resetUserPassword(svc *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		u, err := svc.ResetPassword(c.Request.Context(), c.Param("id"))

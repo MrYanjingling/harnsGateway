@@ -11,24 +11,28 @@ import (
 	"harns-platform/cmd/platform/config"
 	"harns-platform/cmd/platform/options"
 	"harns-platform/pkg/apis/response"
+	"harns-platform/pkg/audit"
 	"harns-platform/pkg/generic"
 	"harns-platform/pkg/logging"
-	"harns-platform/pkg/platform/audit"
+	"harns-platform/pkg/platform/auditapi"
 	"harns-platform/pkg/platform/auth"
 	"harns-platform/pkg/platform/httpx"
 	"harns-platform/pkg/platform/identity"
+	"harns-platform/pkg/telemetry"
 )
 
 type Server struct {
 	*generic.Server
 	*config.Config
-	audit *audit.Service
+	audit       *audit.Module
+	maintenance *audit.Maintenance
 }
 
 func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*Server, error) {
-	allowMethods := []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodPut, http.MethodPatch}
-
-	router.Use(httpx.CORS(config.CORS))
+	if config.Telemetry.Enabled {
+		router.Use(telemetry.Middleware(config.Telemetry.ServiceName))
+	}
+	router.Use(generic.CORS(config.CORS))
 	router.Use(httpx.Recovery())
 	router.HandleMethodNotAllowed = true
 	router.NoRoute(func(c *gin.Context) {
@@ -39,9 +43,8 @@ func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*
 	})
 
 	s := &generic.Server{
-		Router:  router,
-		Port:    o.Port,
-		Methods: allowMethods,
+		Router: router,
+		Port:   o.Port,
 	}
 
 	server := &Server{
@@ -58,11 +61,12 @@ func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*
 
 func (s *Server) InstallHandlers() error {
 	v1 := s.Router.Group("/api/v1")
-	v1.Use(httpx.Trace(), httpx.BodyLimit(maxRequestBodyBytes))
+	v1.Use(generic.BodyLimit(s.Config.MaxBodyBytes))
 	v1.GET("/health", func(c *gin.Context) {
 		response.WriteOK(c, gin.H{"status": "ok"})
 	})
 	v1.GET("/ready", readiness(s.Config))
+	installOpenAPI(s.Router, v1)
 
 	if s.Config.DB == nil {
 		logging.Warnf("database not configured, identity endpoints disabled")
@@ -78,9 +82,12 @@ func (s *Server) InstallHandlers() error {
 
 	var auditMW gin.HandlerFunc = func(c *gin.Context) { c.Next() }
 	if s.Config.Audit.Enabled {
-		s.audit = audit.NewService(s.Config.DB, s.Config.Audit)
-		auditMW = s.audit.Middleware()
+		s.audit = audit.NewModule(s.Config.DB, s.Config.Audit, audit.AppIOT,
+			audit.WithMetrics(auditapi.PlatformMetrics{}))
+		auditMW = auditapi.Middleware(s.audit, s.Config.Audit)
 	}
+	s.maintenance = audit.NewMaintenance(s.Config.DB, s.Config.Audit)
+	reader := audit.NewReader(s.Config.DB, "")
 
 	authGroup := v1.Group("/auth")
 	authGroup.POST("/login", auditMW, httpx.WithOperation(httpx.OpLogin, "用户登录"), authSvc.Login)
@@ -91,9 +98,7 @@ func (s *Server) InstallHandlers() error {
 
 	iot := v1.Group("/iot", authSvc.Auth(), auditMW)
 	identity.InstallHandler(iot, identitySvc)
-	if s.audit != nil {
-		iot.GET("/audit-logs", httpx.WithOperation(httpx.OpQuery, "查询审计日志"), s.audit.List)
-	}
+	iot.GET("/auditLogs", httpx.WithOperation(httpx.OpQuery, "查询审计日志"), auditapi.List(reader))
 	return nil
 }
 
@@ -138,8 +143,23 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 
 	return func(ctx context.Context) {
 		srv.SetKeepAlivesEnabled(false)
+		// Stop accepting new requests and drain in-flight ones first.
+		if err := srv.Shutdown(ctx); err != nil {
+			logging.Error(err)
+		}
+		// Audit writer may still be persisting logs, so close it before the DB.
 		if s.audit != nil {
-			s.audit.Close()
+			_ = s.audit.Close(ctx)
+		}
+		if s.maintenance != nil {
+			s.maintenance.Close(ctx)
+		}
+		if s.Config.TelemetryShutdown != nil {
+			tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := s.Config.TelemetryShutdown(tctx); err != nil {
+				logging.Error(err)
+			}
+			cancel()
 		}
 		if s.Config.DB != nil {
 			if err := s.Config.DB.Close(); err != nil {
@@ -150,9 +170,6 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 			if err := s.Config.Redis.Close(); err != nil {
 				logging.Error(err)
 			}
-		}
-		if err := srv.Shutdown(ctx); err != nil {
-			logging.Error(err)
 		}
 	}, nil
 }

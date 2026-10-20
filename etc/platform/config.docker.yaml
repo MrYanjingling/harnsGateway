@@ -1,0 +1,78 @@
+port: "32300"
+graceful-timeout: 15s
+max-body-bytes: 1048576
+cert-file: ""
+key-file: ""
+
+redis:
+  addrs:
+    - redis:6379
+  username: ""
+  password: ""
+  db: 0
+  read-timeout-seconds: 3
+  write-timeout-seconds: 3
+
+mysql:
+  host: mysql
+  port: 3306
+  username: root
+  password: "harns123456"
+  database: harns
+  charset: utf8mb4
+  max-open-conns: 50
+  max-idle-conns: 10
+  conn-max-lifetime-minutes: 30
+
+migrate: true
+
+minio:
+  endpoint: minio:9000
+  access-key: harns
+  secret-key: harns123456
+  use-ssl: false
+  bucket: harns
+
+security:
+  token-header: Authorization
+  token-secret: "change-me-in-production-32-bytes-min"
+  expire-minutes: 60
+  refresh-minutes: 10
+  max-login-failed: 5
+  lock-minutes: 60
+  rsa-enabled: true
+  captcha-ttl-seconds: 300
+
+cors:
+  allowed-origins:
+    - "*"
+  allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+  allowed-headers: [Authorization, Content-Type, X-Trace-Id]
+  expose-headers: [X-Trace-Id]
+  allow-credentials: false
+  max-age-seconds: 3600
+
+audit:
+  enabled: true
+  max-body-bytes: 16384
+  queue-size: 1024
+  retention-days: 180
+  cleanup-batch-size: 1000
+  batch-size: 100
+  flush-interval-ms: 1000
+
+telemetry:
+  enabled: false
+  endpoint: localhost:4318
+  insecure: true
+  service-name: harns-platform
+
+logging:
+  format: json
+  verbosity: 2
+  output: stdout
+  max-size: 100
+  max-backups: 7
+  max-age: 7
+  compress: true
+  local-time: true

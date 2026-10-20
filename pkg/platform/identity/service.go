@@ -234,7 +234,7 @@ func (s *Service) DeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
-// ResetPassword 将用户密码重置为「用户名+@123」。
+// ResetPassword 将用户密码重置为「用户名+@qwer」。
 func (s *Service) ResetPassword(ctx context.Context, id string) (*User, error) {
 	defer logging.Trace("identity.ResetPassword", "id", id)()
 	u, err := s.store.GetUser(ctx, id)
@@ -553,9 +553,9 @@ func normalizeParentID(v string) string {
 	return v
 }
 
-// defaultPassword 返回默认密码：用户名 + @123。
+// defaultPassword 返回默认密码：用户名 + @qwer。
 func defaultPassword(userName string) string {
-	return userName + "@123"
+	return userName + "@qwer"
 }
 
 // passwordOrDefault 未显式传入密码时使用默认密码。

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"harns-platform/pkg/apis/response"
+	"harns-platform/pkg/generic"
 	"harns-platform/pkg/logging"
 )
 
@@ -19,7 +20,7 @@ func Recovery() gin.HandlerFunc {
 			if r := recover(); r != nil {
 				err := fmt.Errorf("%v", r)
 				logging.ErrorS(err, "panic recovered",
-					"traceId", TraceID(c),
+					"traceId", generic.TraceID(c),
 					"method", c.Request.Method,
 					"path", c.Request.URL.Path,
 					"stack", string(debug.Stack()),

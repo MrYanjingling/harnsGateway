@@ -9,7 +9,7 @@ tags:
   - name: Audit
     description: Audit logs.
 paths:
-  /iot/audit-logs:
+  /iot/auditLogs:
     get:
       tags: [Audit]
       summary: List audit logs (paged).
@@ -25,7 +25,8 @@ paths:
           schema: { type: integer, default: 10, minimum: 1, maximum: 100 }
         - name: app
           in: query
-          schema: { type: string, example: iot }
+          description: Source application.
+          schema: { type: string, enum: [IOT, EMS, EAM], example: EMS }
         - name: userId
           in: query
           schema: { type: string }
@@ -83,7 +84,7 @@ components:
       type: object
       properties:
         id: { type: string }
-        app: { type: string, example: iot }
+        app: { type: string, example: IOT }
         traceId: { type: string }
         userId: { type: string }
         userName: { type: string }

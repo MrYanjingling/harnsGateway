@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: harns-platform-config
+data:
+  config.yaml: |
+    port: "32300"
+    graceful-timeout: 15s
+    max-body-bytes: 1048576
+    redis:
+      addrs: ["redis:6379"]
+      db: 0
+    mysql:
+      host: mysql
+      port: 3306
+      username: root
+      password: "change-me"
+      database: harns
+      charset: utf8mb4
+      max-open-conns: 50
+      max-idle-conns: 10
+      conn-max-lifetime-minutes: 30
+    migrate: true
+    minio:
+      endpoint: minio:9000
+      access-key: harns
+      secret-key: "change-me"
+      use-ssl: false
+      bucket: harns
+    security:
+      token-header: Authorization
+      token-secret: "change-me-in-production-32-bytes-min"
+      expire-minutes: 60
+      refresh-minutes: 10
+      max-login-failed: 5
+      lock-minutes: 60
+      rsa-enabled: true
+      captcha-ttl-seconds: 300
+    cors:
+      allowed-origins: ["*"]
+      allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+      allowed-headers: [Authorization, Content-Type, X-Trace-Id]
+      expose-headers: [X-Trace-Id]
+      allow-credentials: false
+      max-age-seconds: 3600
+    audit:
+      enabled: true
+      max-body-bytes: 16384
+      queue-size: 1024
+      retention-days: 180
+      cleanup-batch-size: 1000
+      batch-size: 100
+      flush-interval-ms: 1000
+    telemetry:
+      enabled: false
+      endpoint: otel-collector:4318
+      insecure: true
+      service-name: harns-platform
+    logging:
+      format: json
+      verbosity: 2
+      output: stdout
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harns-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harns-platform
+  template:
+    metadata:
+      labels:
+        app: harns-platform
+    spec:
+      containers:
+        - name: platform
+          image: harns/platform:latest
+          args: ["-c", "/etc/harns/config.yaml"]
+          ports:
+            - containerPort: 32300
+          volumeMounts:
+            - name: config
+              mountPath: /etc/harns
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 32300
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/v1/ready
+              port: 32300
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: config
+          configMap:
+            name: harns-platform-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: harns-platform
+spec:
+  selector:
+    app: harns-platform
+  ports:
+    - name: http
+      port: 32300
+      targetPort: 32300

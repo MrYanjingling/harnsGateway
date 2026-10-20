@@ -12,6 +12,9 @@ port: "32200"
 # before shutting down (e.g. 15s, 1m).
 graceful-timeout: 15s
 
+# Maximum request body size in bytes (10 MiB).
+max-body-bytes: 10485760
+
 # MQTT broker urls. Scheme must be one of "tcp", "ssl" or "ws".
 mqtt-broker-urls:
   - tcp://127.0.0.1:1883
@@ -22,6 +25,16 @@ mqtt-password: ""
 # TLS certificates. Leave both empty to serve plain HTTP.
 cert-file: ""
 key-file: ""
+
+# CORS configuration.
+cors:
+  allowed-origins:
+    - "*"
+  allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+  allowed-headers: [Authorization, Content-Type, X-Trace-Id]
+  expose-headers: [X-Trace-Id]
+  allow-credentials: false
+  max-age-seconds: 3600
 
 # Logging configuration.
 logging:

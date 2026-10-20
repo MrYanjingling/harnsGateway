@@ -1,4 +1,4 @@
-package httpx
+package generic
 
 import (
 	"net/http"

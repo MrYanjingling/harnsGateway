@@ -73,19 +73,37 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 - 认证（共享）：`POST /api/v1/auth/login`、`POST /api/v1/auth/logout`、
   `GET /api/v1/auth/index`、`GET /api/v1/auth/publicKey`、
   `POST /api/v1/auth/verificationCode`
-- 业务（app=iot）：`/api/v1/iot/users`、`/roles`、`/orgs`、`/audit-logs`
-- 探针：`GET /api/v1/health`、`GET /api/v1/ready`
+- 业务（app=IOT）：`/api/v1/iot/users`、`/roles`、`/orgs`、`/auditLogs`
+- 探针：`GET /api/v1/health`、`GET /api/v1/ready`（检查 DB、Redis、MinIO）
+- 文档：`GET /swagger`、`GET /api/v1/openapi`、`GET /api/v1/openapi/{file}`
+- 运维：`GET /metrics`（Prometheus）、`GET /debug/pprof/`
 
 ### 认证
 
-- 迁移会初始化超级管理员角色（`code=admin`）与账号 `admin / admin@123`（首次登录后请修改）。
+- 迁移会初始化超级管理员角色（`code=admin`）与账号 `admin / admin@qwer`（首次登录后请修改）。
 - JWT(HS256) + Redis 会话；密码支持 RSA-OAEP(SHA-256) 加密。
 - 连续 5 次登录失败锁定 60 分钟。
 
 ### 审计
 
 - 仅记录写操作；入参/出参脱敏并按 16KB 截断。
-- 日志保留 `audit.retention-days`（默认 180 天）。
+- 日志异步批量写入（`audit.batch-size` 默认 100，`audit.flush-interval-ms` 默认 1000），
+  保留 `audit.retention-days`（默认 180 天），清理按 `audit.cleanup-batch-size` 分批删除。
+- `app` 表示来源服务：`IOT`、`EMS`、`EAM`。EMS/EAM 使用同一审计模块，各自绑定自己的 app。
+
+同仓库的其他 Go 服务可直接使用 `pkg/audit`：
+
+```go
+cfg := audit.DefaultConfig()
+m := audit.NewModule(db, cfg, audit.AppEMS)
+defer m.Close(ctx)
+
+_ = m.Record(ctx, audit.Event{OperationType: audit.OpCreate, Path: "/api/v1/ems/..."})
+list, total, err := m.List(ctx, audit.Query{PageSize: 20})
+```
+
+表结构和 180 天清理只由 platform 负责。服务需要安装 `generic.Trace()`，出站调用使用
+`generic.SetTraceHeader(ctx, req)` 透传 `traceId`，这样不同服务的记录可以关联。
 
 ### 开发
 
@@ -95,3 +113,15 @@ make lint    # gofmt + go vet（排除 tsdb）
 make test    # go test
 make package # 构建并打包二进制与 etc/ 配置
 ```
+
+### Docker
+
+```bash
+docker compose up --build
+# 平台：http://127.0.0.1:32300
+# 文档：http://127.0.0.1:32300/swagger
+# MinIO：http://127.0.0.1:9001
+```
+
+compose 会启动 MySQL、Redis、MinIO 与平台服务。正式环境请先修改默认凭据与
+`security.token-secret`。

@@ -25,7 +25,7 @@
 - 3.2 模块层：业务代码放 `pkg/platform/`，入口在 `cmd/platform/`；禁止写进 `pkg/gateway` 或通用层。
 - 3.3 模块内聚：身份与组织（用户/角色/组织/关联）合并为单包 `pkg/platform/identity/`（model/store/service/server/v1），同包直接调用，避免循环依赖。
 - 3.4 模块间调用：工业应用为独立服务，通过 HTTP API 交互；platform 内部跨模块时才由消费方定义接口（contract）并在组合根注入，禁止全局单例。
-- 3.5 路径约定：业务接口 `/api/v1/{app}/...`（当前 app=`iot`）；认证/当前用户等共享接口 `/api/v1/auth/...`；健康检查 `/api/v1/health`。审计按路径解析 `app`。
+- 3.5 路径约定：业务接口 `/api/v1/{app}/...`（当前 app=`iot`）；认证/当前用户等共享接口 `/api/v1/auth/...`；健康检查 `/api/v1/health`。审计 `app` 由服务绑定（platform 为 `IOT`）。
 
 ## 4. 通用编码约束
 
@@ -89,7 +89,7 @@
 
 > 每个功能用如下格式，序号不可跳号；未实现前保持 `状态: TODO`。
 >
-> 初始化数据：迁移会创建超级管理员角色（`code=admin`）与账号 `admin / admin@123`，首次登录后请修改密码。
+> 初始化数据：迁移会创建超级管理员角色（`code=admin`）与账号 `admin / admin@qwer`，首次登录后请修改密码。
 
 ### F1. 用户管理（CRUD + 分页）
 - 状态：TODO
@@ -102,7 +102,7 @@
   | 字段 | Go 类型 | 约束 |
   |---|---|---|
   | userName | string | 必填，唯一 |
-  | password | string | 可选，默认 `用户名+@123`；bcrypt 落库，响应不回传 |
+  | password | string | 可选，默认 `用户名+@qwer`；bcrypt 落库，响应不回传 |
   | userNo | string | 必填，唯一 |
   | nickName | string | 必填 |
   | birthDate | string `2006-01-02` | 可空 |
@@ -125,7 +125,7 @@
   - GET `/api/v1/iot/users/:id` → 200 + UserVo
   - PUT `/api/v1/iot/users/:id` → 200 + UserVo
   - DELETE `/api/v1/iot/users/:id` → 200（物理删除，同事务清理关联）
-  - PUT `/api/v1/iot/users/:id/password` → 200 + UserVo（重置密码为 `用户名+@123`）
+  - PUT `/api/v1/iot/users/:id/password` → 200 + UserVo（重置密码为 `用户名+@qwer`）
   - GET `/api/v1/iot/users` → 200 + `PageResp[UserVo]`
 - 约束：遵循 §3~§9；DTO 放 `pkg/platform/identity/v1`（`XxxReq`/`XxxQuery`）；对外一律 `XxxVo`，禁止返回实体（防泄露 password/authKey）；`createdUser`/`updatedUser` 取自登录上下文（`principal.UserID(ctx)`）。
 - 验收标准：
@@ -133,7 +133,7 @@
   - [ ] 列表用 `PageQuery`/`PageResp`，`data` 含 total/page/pageSize/list
   - [ ] userName/userNo 重复 → 400 + 业务码 `error.user_name_exists`/`error.user_no_exists`；id 不存在 → 400 + `error.user_not_found`
   - [ ] 响应体不含 password/authKey；password 落库为 bcrypt
-  - [ ] 创建时未传 password → 使用 `用户名+@123`；重置密码接口将密码置为 `用户名+@123`
+  - [ ] 创建时未传 password → 使用 `用户名+@qwer`；重置密码接口将密码置为 `用户名+@qwer`
   - [ ] 创建时 `roleIds`/`orgIds` 校验存在（不存在 → 400 `error.role_not_found`/`error.org_not_found`）
   - [ ] 用户 + `user_roles` + `user_orgs` 同一事务写入，失败整体回滚
   - [ ] `UserVo` 返回 `roleIds`/`orgIds`，以及关联的 `roles`/`orgs` 对象数组（列表亦是）
@@ -229,7 +229,7 @@
   - JWT 只含 `login_user`(会话UUID)/`sub`/`iat`，不设 `exp`；`token-secret` ≥32 字节。
   - RSA：启动时在 MinIO 检查 `login-rsa-private.pem`/`login-rsa-public.pem`，缺失才生成；MinIO 不可达 → 启动失败；解密用 **OAEP(SHA-256)**，失败按明文。
   - 验证码：生成后存 Redis `platform:captcha:<uuid>`（TTL `captcha-ttl-seconds`，默认 300s）；**登录中的校验默认注释未启用**（`auth/service.go` 的 login）。
-  - Trace：由 `httpx.Trace()` 独立处理（`X-Trace-Id` 生成/回写 + 请求结果日志），与认证解耦；`auth.Auth()` 只管认证。
+  - Trace：由 `generic.Trace()` 统一处理（`X-Trace-Id` 生成/回写 + 访问日志），与认证解耦；`auth.Auth()` 只管认证。
   - 上下文：认证成功后把**完整用户**（`identity/v1.UserVo`，含 roles/orgs）注入 `c.Request.Context()`；业务层用 `principal.UserID(ctx)` / `principal.FromContext(ctx)` 取用户信息（见 §9.4）。
   - 会话失效：改密/重置密码/删除用户/账户禁用/登录失败锁定后，按 userId 清理该用户全部会话（Redis 反向索引 `platform:user_sessions:<userId>`）。
 - 约束：遵循 §3~§9；受保护接口（users/roles/orgs）挂鉴权中间件；`health`/login/logout/publicKey 放行。
@@ -250,22 +250,24 @@
 - 状态：TODO
 - 目标：记录写操作的入参/出参，支持查询。
 - 中间件（拆分）：
-  - `httpx.Trace()`：traceId（`X-Trace-Id`）生成/透传。
-  - `auth.Auth()`：仅认证；从 `httpx.TraceID` 取 trace。
-  - `audit.Middleware()`：捕获入参/出参并异步入库。
+  - `generic.Trace()`：traceId（`X-Trace-Id`）生成/透传，访问日志读取同一 trace。
+  - `auth.Auth()`：仅认证；审计从 `generic.TraceID` 取 trace。
+  - `ginmw.Middleware()` + `auditapi.Middleware()`：捕获入参/出参并异步入库。
   - 顺序：`Trace → Auth → Audit → handler`。
+  - platform 绑定 `app=IOT`，auth 接口同样记 `IOT`。
 - 审计范围：仅 `POST/PUT/PATCH/DELETE`（含 login/logout）；`GET` 不记录。排除 `health`/`auth/publicKey`/`auth/verificationCode`。
-- 落库（异步）：有界队列；满则丢弃并告警；失败不影响响应。
-- 字段：`app`（由路径解析，auth 记 `platform`）、`traceId`、`userId/userName`（`principal`）、`operationType/operationDesc`（路由 `httpx.WithOperation` 显式声明）、`method/path/query/ip/userAgent`、`requestBody/responseBody`、`status/resultCode/errorMsg`、`durationMs`。
+- 落库（异步批量）：有界队列；worker 攒批后多行 INSERT（`audit.batch-size` 默认 100，上限 500；`audit.flush-interval-ms` 默认 1000）；满则丢弃并告警；批量失败重试一次，仍失败则逐条回退；失败不影响响应。
+- 字段：`app`（由服务绑定，platform/auth 均为 `IOT`）、`traceId`、`userId/userName`（`principal`）、`operationType/operationDesc`（路由 `httpx.WithOperation`/`ginmw.WithOperation` 显式声明）、`method/path/query/ip/userAgent`、`requestBody/responseBody`、`status/resultCode/errorMsg`、`durationMs`。
 - 入参/出参：仅 JSON；按 16KB 截断；敏感键（password/authKey/token/accessKey/secretKey/ak/sk/secret）脱敏为 `***`；非 JSON 记 `<non-json body omitted>`。
-- 查询：`GET /api/v1/iot/audit-logs`（分页 + app/userId/path/method/resultCode/start/end）。
-- 保留：`audit.retention-days`（默认 180 天）；启动时及每 24h 清理过期日志。
+- 查询：`GET /api/v1/iot/auditLogs`（分页 + app/userId/path/method/resultCode/start/end）；`app` 可选、大写、单值。
+- 保留：`audit.retention-days`（默认 180 天）；启动时及每 24h 清理过期日志，按 `audit.cleanup-batch-size` 分批删除。
 - 验收标准：
   - [ ] 写操作落 `audit_logs`，GET 不落
   - [ ] app/traceId/userId/operationType/入参/出参/耗时/业务码正确
   - [ ] 敏感字段脱敏、16KB 截断
   - [ ] 异步不阻塞；队列满丢弃并告警
-  - [ ] 登录/登出审计 app=`platform`，业务审计 app=`iot`
+  - [ ] 批量 INSERT 生效；批量失败可重试并按需逐条回退
+  - [ ] 登录/登出和业务审计 app=`IOT`
   - [ ] 审计查询分页与筛选可用
   - [ ] 超过保留期的日志被自动清理
 

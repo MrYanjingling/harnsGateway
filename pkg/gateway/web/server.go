@@ -23,8 +23,7 @@ type Server struct {
 }
 
 func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*Server, error) {
-	allowMethods := []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodPut, http.MethodPatch}
-
+	router.Use(generic.CORS(config.CORS))
 	router.Use(gin.Recovery())
 	router.HandleMethodNotAllowed = true
 	router.NoRoute(func(c *gin.Context) {
@@ -35,9 +34,8 @@ func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*
 	})
 
 	s := &generic.Server{
-		Router:  router,
-		Port:    o.Port,
-		Methods: allowMethods,
+		Router: router,
+		Port:   o.Port,
 	}
 
 	server := &Server{
@@ -53,6 +51,7 @@ func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*
 
 func (s *Server) InstallHandlers() {
 	v1 := s.Router.Group("/api/v1")
+	v1.Use(generic.BodyLimit(s.Config.MaxBodyBytes))
 	device.InstallHandler(v1, s.Config.DeviceMgr)
 	gateway.InstallHandler(v1, s.Config.GatewayMgr)
 }
@@ -98,10 +97,11 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 
 	return func(ctx context.Context) {
 		srv.SetKeepAlivesEnabled(false)
-		if err := s.Config.DeviceMgr.Shutdown(ctx); err != nil {
+		// Drain HTTP requests before tearing down the device manager.
+		if err := srv.Shutdown(ctx); err != nil {
 			logging.Error(err)
 		}
-		if err := srv.Shutdown(ctx); err != nil {
+		if err := s.Config.DeviceMgr.Shutdown(ctx); err != nil {
 			logging.Error(err)
 		}
 	}, nil
