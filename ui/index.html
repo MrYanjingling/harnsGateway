@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0f12" />
+    <title>harnsGateway · 管理后台</title>
+    <script>
+      // 在首屏渲染前应用主题,避免暗色模式闪烁。
+      ;(() => {
+        try {
+          const saved = localStorage.getItem('harns-theme')
+          const dark =
+            saved === 'dark' ||
+            (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', dark)
+        } catch {
+          /* localStorage 不可用时忽略 */
+        }
+      })()
+    </script>
+  </head>
+  <body class="h-full">
+    <div id="root" class="min-h-full"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
