@@ -1,111 +1,61 @@
-// Package migrate applies embedded SQL migrations at startup and records
-// applied versions in schema_migrations.
+// Package migrate applies embedded SQL migrations using golang-migrate.
 package migrate
 
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"io/fs"
-	"sort"
 	"strings"
-	"time"
+
+	"github.com/golang-migrate/migrate/v4"
+	migratemysql "github.com/golang-migrate/migrate/v4/database/mysql"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 
 	"harns-platform/migrations"
 	"harns-platform/pkg/logging"
 )
 
-// Run applies pending migrations in filename order.
-func Run(ctx context.Context, db *sql.DB) error {
-	if _, err := db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
-		version VARCHAR(128) NOT NULL PRIMARY KEY,
-		applied_time DATETIME NOT NULL
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`); err != nil {
-		return fmt.Errorf("create schema_migrations failed: %w", err)
+// Run applies pending migrations from the embedded filesystem.
+func Run(ctx context.Context, dsn string) error {
+	migrationDSN := dsn
+	if !strings.Contains(migrationDSN, "multiStatements=") {
+		migrationDSN += "&multiStatements=true"
 	}
 
-	applied, err := appliedVersions(ctx, db)
+	db, err := sql.Open("mysql", migrationDSN)
 	if err != nil {
-		return err
+		return fmt.Errorf("open migration database failed: %w", err)
+	}
+	defer db.Close()
+
+	if err := db.PingContext(ctx); err != nil {
+		return fmt.Errorf("connect migration database failed: %w", err)
 	}
 
-	names, err := migrationFiles()
+	driver, err := migratemysql.WithInstance(db, &migratemysql.Config{})
 	if err != nil {
-		return err
+		return fmt.Errorf("init migration driver failed: %w", err)
+	}
+	source, err := iofs.New(migrations.FS, ".")
+	if err != nil {
+		return fmt.Errorf("init migration source failed: %w", err)
+	}
+	m, err := migrate.NewWithInstance("iofs", source, "mysql", driver)
+	if err != nil {
+		return fmt.Errorf("init migrator failed: %w", err)
 	}
 
-	for _, name := range names {
-		version := strings.TrimSuffix(name, ".sql")
-		if _, ok := applied[version]; ok {
-			continue
-		}
-		data, err := migrations.FS.ReadFile(name)
-		if err != nil {
-			return fmt.Errorf("read migration %s failed: %w", name, err)
-		}
-		if err := apply(ctx, db, string(data)); err != nil {
-			return fmt.Errorf("apply migration %s failed: %w", name, err)
-		}
-		if _, err := db.ExecContext(ctx,
-			`INSERT INTO schema_migrations (version, applied_time) VALUES (?, ?)`,
-			version, time.Now()); err != nil {
-			return fmt.Errorf("record migration %s failed: %w", name, err)
-		}
-		logging.V(1).InfoS("Applied migration", "version", version)
+	if version, dirty, verr := m.Version(); verr == nil {
+		logging.V(1).InfoS("Migration state", "version", version, "dirty", dirty)
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("apply migrations failed: %w", err)
+	}
+
+	if version, _, verr := m.Version(); verr == nil {
+		logging.V(1).InfoS("Migrations applied", "version", version)
 	}
 	return nil
-}
-
-func appliedVersions(ctx context.Context, db *sql.DB) (map[string]struct{}, error) {
-	rows, err := db.QueryContext(ctx, `SELECT version FROM schema_migrations`)
-	if err != nil {
-		return nil, fmt.Errorf("load schema_migrations failed: %w", err)
-	}
-	defer rows.Close()
-
-	applied := make(map[string]struct{})
-	for rows.Next() {
-		var version string
-		if err := rows.Scan(&version); err != nil {
-			return nil, err
-		}
-		applied[version] = struct{}{}
-	}
-	return applied, rows.Err()
-}
-
-func migrationFiles() ([]string, error) {
-	entries, err := fs.ReadDir(migrations.FS, ".")
-	if err != nil {
-		return nil, fmt.Errorf("read migrations failed: %w", err)
-	}
-	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
-			continue
-		}
-		names = append(names, e.Name())
-	}
-	sort.Strings(names)
-	return names, nil
-}
-
-func apply(ctx context.Context, db *sql.DB, script string) error {
-	for _, stmt := range splitStatements(script) {
-		if _, err := db.ExecContext(ctx, stmt); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func splitStatements(script string) []string {
-	parts := strings.Split(script, ";")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if s := strings.TrimSpace(p); s != "" {
-			out = append(out, s)
-		}
-	}
-	return out
 }

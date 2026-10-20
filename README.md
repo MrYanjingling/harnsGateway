@@ -68,7 +68,7 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 
 - MySQL, Redis and MinIO are required.
 - On startup the service pings MySQL/Redis and applies embedded SQL migrations
-  (`migrations/*.sql`) when `migrate: true`.
+  (golang-migrate, files `migrations/NNNNNN_name.up.sql`) when `migrate: true`.
 
 ### Endpoints
 

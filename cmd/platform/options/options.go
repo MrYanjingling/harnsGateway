@@ -169,7 +169,7 @@ func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
 	if o.Migrate {
 		migCtx, cancelMig := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancelMig()
-		if err := migrate.Run(migCtx, db); err != nil {
+		if err := migrate.Run(migCtx, dsn); err != nil {
 			_ = db.Close()
 			return nil, fmt.Errorf("run migrations failed: %w", err)
 		}

@@ -66,7 +66,7 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 ### 依赖
 
 - 需要 MySQL、Redis、MinIO。
-- 启动时会 Ping MySQL/Redis；`migrate: true` 时执行内嵌迁移（`migrations/*.sql`）。
+- 启动时会 Ping MySQL/Redis；`migrate: true` 时用 golang-migrate 执行内嵌迁移（`migrations/NNNNNN_name.up.sql`）。
 
 ### 接口
 

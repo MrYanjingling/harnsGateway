@@ -63,7 +63,8 @@
 - 7.3 敏感信息默认留空，不入库、不打日志。
 - 7.4 优先级：CLI flag > 配置文件 > 内置默认（框架已实现，勿破坏）；启动时 `options.Validate` 校验。
 - 7.5 认证配置 `security`（见 F4）：`token-secret` 必须 ≥32 字节，变更会使所有旧 token 失效；`rsa-enabled=true` 时启动依赖 MinIO。
-- 7.6 启动自检：启动时 Ping MySQL/Redis 并配置连接池（`max-open-conns`/`max-idle-conns`/`conn-max-lifetime-minutes`）；`migrate: true` 时执行内嵌迁移（`migrations/*.sql` → `schema_migrations`）。任一失败即启动失败。
+- 7.6 启动自检：启动时 Ping MySQL/Redis 并配置连接池（`max-open-conns`/`max-idle-conns`/`conn-max-lifetime-minutes`）；`migrate: true` 时用 **golang-migrate** 执行内嵌迁移（`migrations/NNNNNN_name.up.sql` / `.down.sql`，版本表 `schema_migrations`）。任一失败即启动失败。
+  > 备注：若环境曾运行旧版自研迁移器，旧 `schema_migrations`（`version VARCHAR`）与新表结构不兼容，升级前请先删除该表（新库无影响）。
 - 7.7 探针：`GET /api/v1/health`（存活，恒 200）、`GET /api/v1/ready`（检查 DB/Redis，失败返回 503）。
 - 7.8 审计/CORS：`audit.retention-days`（默认 180）；CORS 见 `cors` 段（§5.8）。
 
