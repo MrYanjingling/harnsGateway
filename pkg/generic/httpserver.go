@@ -8,7 +8,7 @@ import (
 func Default() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
-	engine.Use(i18n.Middleware(), logger(), gin.Recovery())
+	engine.Use(i18n.Middleware(), logger())
 	return engine
 }
 

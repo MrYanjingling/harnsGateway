@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"harns-platform/cmd/platform/config"
 	"harns-platform/cmd/platform/options"
@@ -14,7 +17,6 @@ import (
 	"harns-platform/pkg/platform/auth"
 	"harns-platform/pkg/platform/httpx"
 	"harns-platform/pkg/platform/identity"
-	"net/http"
 )
 
 type Server struct {
@@ -25,6 +27,15 @@ type Server struct {
 
 func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*Server, error) {
 	allowMethods := []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodPut, http.MethodPatch}
+
+	router.Use(httpx.Recovery())
+	router.HandleMethodNotAllowed = true
+	router.NoRoute(func(c *gin.Context) {
+		response.WriteError(c, http.StatusNotFound, response.ErrNotFound())
+	})
+	router.NoMethod(func(c *gin.Context) {
+		response.WriteError(c, http.StatusMethodNotAllowed, response.ErrMethodNotAllowed())
+	})
 
 	s := &generic.Server{
 		Router:  router,
@@ -46,10 +57,11 @@ func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*
 
 func (s *Server) InstallHandlers() error {
 	v1 := s.Router.Group("/api/v1")
-	v1.Use(httpx.Trace())
+	v1.Use(httpx.Trace(), httpx.BodyLimit(maxRequestBodyBytes))
 	v1.GET("/health", func(c *gin.Context) {
 		response.WriteOK(c, gin.H{"status": "ok"})
 	})
+	v1.GET("/ready", readiness(s.Config))
 
 	if s.Config.DB == nil {
 		logging.Warnf("database not configured, identity endpoints disabled")
@@ -95,17 +107,27 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 		}
 
 		srv = &http.Server{
-			Addr:      fmt.Sprintf(":%s", s.Port),
-			Handler:   s.Router,
-			TLSConfig: c,
+			Addr:              fmt.Sprintf(":%s", s.Port),
+			Handler:           s.Router,
+			TLSConfig:         c,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      60 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			MaxHeaderBytes:    1 << 20,
 		}
 		go func() {
 			logging.Error(srv.ListenAndServeTLS("", ""))
 		}()
 	} else {
 		srv = &http.Server{
-			Addr:    fmt.Sprintf(":%s", s.Port),
-			Handler: s.Router,
+			Addr:              fmt.Sprintf(":%s", s.Port),
+			Handler:           s.Router,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      60 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			MaxHeaderBytes:    1 << 20,
 		}
 		go func() {
 			logging.Error(srv.ListenAndServe())

@@ -23,6 +23,8 @@ redis:
   username: ""
   password: ""
   db: 0
+  read-timeout-seconds: 3
+  write-timeout-seconds: 3
 
 # MySQL connection.
 mysql:
@@ -32,6 +34,12 @@ mysql:
   password: ""
   database: harns
   charset: utf8mb4
+  max-open-conns: 50
+  max-idle-conns: 10
+  conn-max-lifetime-minutes: 30
+
+# Run embedded SQL migrations on startup.
+migrate: true
 
 # MinIO object storage connection.
 minio:

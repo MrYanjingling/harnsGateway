@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"harns-platform/cmd/gateway/config"
 	"harns-platform/cmd/gateway/options"
+	"harns-platform/pkg/apis/response"
 	"harns-platform/pkg/gateway"
 	"harns-platform/pkg/gateway/device"
 	"harns-platform/pkg/generic"
@@ -21,6 +24,15 @@ type Server struct {
 
 func NewServer(router *gin.Engine, o *options.Options, config *config.Config) (*Server, error) {
 	allowMethods := []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodPut, http.MethodPatch}
+
+	router.Use(gin.Recovery())
+	router.HandleMethodNotAllowed = true
+	router.NoRoute(func(c *gin.Context) {
+		response.WriteError(c, http.StatusNotFound, response.ErrNotFound())
+	})
+	router.NoMethod(func(c *gin.Context) {
+		response.WriteError(c, http.StatusMethodNotAllowed, response.ErrMethodNotAllowed())
+	})
 
 	s := &generic.Server{
 		Router:  router,
@@ -57,17 +69,27 @@ func (s *Server) Serve() (func(ctx context.Context), error) {
 		}
 
 		srv = &http.Server{
-			Addr:      fmt.Sprintf(":%s", s.Port),
-			Handler:   s.Router,
-			TLSConfig: c,
+			Addr:              fmt.Sprintf(":%s", s.Port),
+			Handler:           s.Router,
+			TLSConfig:         c,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      60 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			MaxHeaderBytes:    1 << 20,
 		}
 		go func() {
 			logging.Error(srv.ListenAndServeTLS("", ""))
 		}()
 	} else {
 		srv = &http.Server{
-			Addr:    fmt.Sprintf(":%s", s.Port),
-			Handler: s.Router,
+			Addr:              fmt.Sprintf(":%s", s.Port),
+			Handler:           s.Router,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      60 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			MaxHeaderBytes:    1 << 20,
 		}
 		go func() {
 			logging.Error(srv.ListenAndServe())

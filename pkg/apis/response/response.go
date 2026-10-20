@@ -294,6 +294,16 @@ func ErrCaptchaError() *responseError {
 	return generateError(ErrCodeCaptchaError)
 }
 
+// ErrNotFound reports an unknown route.
+func ErrNotFound() *responseError {
+	return generateError(ErrCodeNotFound)
+}
+
+// ErrMethodNotAllowed reports an unsupported HTTP method for a route.
+func ErrMethodNotAllowed() *responseError {
+	return generateError(ErrCodeMethodNotAllowed)
+}
+
 func ErrBooleanInvalid(infos ...string) *responseError {
 	if len(infos) == 1 {
 		infos = append(infos, "")
