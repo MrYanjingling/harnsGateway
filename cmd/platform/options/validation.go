@@ -71,6 +71,9 @@ func Validate(o *Options) []error {
 		if o.Audit.QueueSize <= 0 {
 			errs = append(errs, fmt.Errorf("audit.queue-size must be greater than 0"))
 		}
+		if o.Audit.RetentionDays <= 0 {
+			errs = append(errs, fmt.Errorf("audit.retention-days must be greater than 0"))
+		}
 	}
 
 	return errs

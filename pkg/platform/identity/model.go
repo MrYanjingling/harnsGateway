@@ -53,15 +53,19 @@ type User struct {
 	OrgIDs  []string `json:"-"`
 	Roles   []*Role  `json:"-"`
 	Orgs    []*Org   `json:"-"`
+
+	RoleCodes   []string `json:"-"`
+	Permissions []string `json:"-"`
 }
 
 // Role 是角色实体。
 type Role struct {
 	apis.Meta
-	Name        string `json:"name"`
-	Code        string `json:"code"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
+	Name        string   `json:"name"`
+	Code        string   `json:"code"`
+	Description string   `json:"description"`
+	Status      string   `json:"status"`
+	Permissions []string `json:"permissions"`
 }
 
 // Org 是组织(部门)实体。

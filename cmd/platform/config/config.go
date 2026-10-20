@@ -8,6 +8,7 @@ import (
 
 	"harns-platform/pkg/platform/audit"
 	"harns-platform/pkg/platform/auth"
+	"harns-platform/pkg/platform/httpx"
 )
 
 type Config struct {
@@ -19,5 +20,6 @@ type Config struct {
 	MinIO       *minio.Client
 	MinIOBucket string
 	Security    auth.Config
+	CORS        httpx.CORSConfig
 	Audit       audit.Config
 }

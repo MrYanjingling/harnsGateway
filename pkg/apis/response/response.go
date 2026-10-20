@@ -304,6 +304,11 @@ func ErrMethodNotAllowed() *responseError {
 	return generateError(ErrCodeMethodNotAllowed)
 }
 
+// ErrForbidden reports that the authenticated user lacks permission.
+func ErrForbidden() *responseError {
+	return generateError(ErrCodeForbidden)
+}
+
 func ErrBooleanInvalid(infos ...string) *responseError {
 	if len(infos) == 1 {
 		infos = append(infos, "")

@@ -8,6 +8,7 @@ import (
 
 	"harns-platform/pkg/apis/response"
 	"harns-platform/pkg/logging"
+	"harns-platform/pkg/platform/httpx"
 	"harns-platform/pkg/platform/principal"
 )
 
@@ -30,9 +31,7 @@ type captchaResp struct {
 // Login handles POST /login.
 func (s *Service) Login(c *gin.Context) {
 	var req loginReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		logging.V(3).InfoS("Invalid login request", "err", err)
-		response.WriteError(c, http.StatusBadRequest, response.ErrMalformedJSON)
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 

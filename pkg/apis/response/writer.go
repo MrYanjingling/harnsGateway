@@ -31,6 +31,7 @@ type Result struct {
 type ErrorItem struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
+	Field   string      `json:"field,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 }
 

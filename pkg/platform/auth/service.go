@@ -108,6 +108,7 @@ func (s *Service) login(ctx context.Context, username, password, code, key, ip, 
 			return "", nil, ferr
 		}
 		if lockedUntil != nil {
+			_ = s.sessions.DeleteByUser(ctx, u.ID)
 			return "", nil, response.ErrAccountLocked(*lockedUntil)
 		}
 		return "", nil, response.ErrUsernamePasswordError()
@@ -151,6 +152,11 @@ func (s *Service) logout(ctx context.Context, rawHeader string) {
 		return
 	}
 	_ = s.sessions.Delete(ctx, sessionID)
+}
+
+// InvalidateUserSessions removes all sessions of a user (identity.SessionInvalidator).
+func (s *Service) InvalidateUserSessions(ctx context.Context, userID string) error {
+	return s.sessions.DeleteByUser(ctx, userID)
 }
 
 // index returns the session user; with refresh it reloads from DB and writes

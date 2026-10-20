@@ -10,6 +10,7 @@ type Config struct {
 	LockMinutes       int    `json:"lock-minutes"`
 	RSAEnabled        bool   `json:"rsa-enabled"`
 	CaptchaTTLSeconds int    `json:"captcha-ttl-seconds"`
+	SuperRoleCode     string `json:"super-role-code"`
 }
 
 // DefaultConfig returns the default authentication configuration.
@@ -23,5 +24,6 @@ func DefaultConfig() Config {
 		LockMinutes:       60,
 		RSAEnabled:        true,
 		CaptchaTTLSeconds: 300,
+		SuperRoleCode:     "admin",
 	}
 }

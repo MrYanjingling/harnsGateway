@@ -45,6 +45,8 @@ var messageIDs = map[ErrCode]string{
 	ErrCodeCaptchaError:               "error.captcha_error",
 	ErrCodeNotFound:                   "error.not_found",
 	ErrCodeMethodNotAllowed:           "error.method_not_allowed",
+	ErrCodeValidationFailed:           "error.validation_failed",
+	ErrCodeForbidden:                  "error.forbidden",
 }
 
 func messageID(code ErrCode) string {

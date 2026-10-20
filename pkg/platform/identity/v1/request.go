@@ -43,31 +43,33 @@ type UpdateUserReq struct {
 // UserQuery 用户分页查询参数。
 type UserQuery struct {
 	apis.PageQuery
-	Keyword string `form:"keyword" binding:"omitempty,max=64"`
+	Keyword string `json:"keyword" form:"keyword" binding:"omitempty,max=64"`
 }
 
 // ---------- Role ----------
 
 // CreateRoleReq 创建角色请求。
 type CreateRoleReq struct {
-	Name        string `json:"name" binding:"required,max=64"`
-	Code        string `json:"code" binding:"required,max=64"`
-	Description string `json:"description" binding:"omitempty,max=255"`
-	Status      string `json:"status" binding:"omitempty,oneof=enabled disabled"`
+	Name        string   `json:"name" binding:"required,max=64"`
+	Code        string   `json:"code" binding:"required,max=64"`
+	Description string   `json:"description" binding:"omitempty,max=255"`
+	Status      string   `json:"status" binding:"omitempty,oneof=enabled disabled"`
+	Permissions []string `json:"permissions" binding:"omitempty,dive,max=64"`
 }
 
 // UpdateRoleReq 更新角色请求，字段可选。
 type UpdateRoleReq struct {
-	Name        *string `json:"name" binding:"omitempty,max=64"`
-	Code        *string `json:"code" binding:"omitempty,max=64"`
-	Description *string `json:"description" binding:"omitempty,max=255"`
-	Status      *string `json:"status" binding:"omitempty,oneof=enabled disabled"`
+	Name        *string   `json:"name" binding:"omitempty,max=64"`
+	Code        *string   `json:"code" binding:"omitempty,max=64"`
+	Description *string   `json:"description" binding:"omitempty,max=255"`
+	Status      *string   `json:"status" binding:"omitempty,oneof=enabled disabled"`
+	Permissions *[]string `json:"permissions" binding:"omitempty,dive,max=64"`
 }
 
 // RoleQuery 角色分页查询参数。
 type RoleQuery struct {
 	apis.PageQuery
-	Keyword string `form:"keyword" binding:"omitempty,max=64"`
+	Keyword string `json:"keyword" form:"keyword" binding:"omitempty,max=64"`
 }
 
 // ---------- Org ----------

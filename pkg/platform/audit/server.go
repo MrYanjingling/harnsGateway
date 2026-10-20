@@ -8,13 +8,13 @@ import (
 	"harns-platform/pkg/apis"
 	"harns-platform/pkg/apis/response"
 	"harns-platform/pkg/logging"
+	"harns-platform/pkg/platform/httpx"
 )
 
 // List handles GET /audit-logs.
 func (s *Service) List(c *gin.Context) {
 	var q ListQuery
-	if err := c.ShouldBindQuery(&q); err != nil {
-		response.WriteError(c, http.StatusBadRequest, response.ErrMalformedJSON)
+	if !httpx.BindQuery(c, &q) {
 		return
 	}
 	q.Normalize()

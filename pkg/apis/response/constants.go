@@ -44,6 +44,8 @@ const (
 	ErrCodeCaptchaError                       // 10038
 	ErrCodeNotFound                           // 10039
 	ErrCodeMethodNotAllowed                   // 10040
+	ErrCodeValidationFailed                   // 10041
+	ErrCodeForbidden                          // 10042
 )
 
 // !!! IMPORTANT PLEASE READ FIRST !!!

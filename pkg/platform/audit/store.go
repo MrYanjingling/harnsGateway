@@ -86,6 +86,15 @@ func (s *Store) List(ctx context.Context, q ListQuery) ([]*Log, int64, error) {
 	return list, total, rows.Err()
 }
 
+// DeleteBefore removes audit logs older than the given time.
+func (s *Store) DeleteBefore(ctx context.Context, before time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM audit_logs WHERE created_time < ?`, before)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 type scanner interface{ Scan(dest ...any) error }
 
 func scanLog(sc scanner) (*Log, error) {

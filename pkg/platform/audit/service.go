@@ -34,7 +34,43 @@ func NewService(db *sql.DB, cfg Config) *Service {
 	}
 	s.wg.Add(1)
 	go s.worker()
+	if cfg.RetentionDays > 0 {
+		s.wg.Add(1)
+		go s.cleanupLoop()
+	}
 	return s
+}
+
+func (s *Service) cleanupLoop() {
+	defer s.wg.Done()
+	s.cleanup()
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			s.cleanup()
+		case <-s.done:
+			return
+		}
+	}
+}
+
+func (s *Service) cleanup() {
+	if s.cfg.RetentionDays <= 0 {
+		return
+	}
+	before := time.Now().AddDate(0, 0, -s.cfg.RetentionDays)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	n, err := s.store.DeleteBefore(ctx, before)
+	if err != nil {
+		logging.V(1).InfoS("Failed to clean audit logs", "err", err)
+		return
+	}
+	if n > 0 {
+		logging.V(1).InfoS("Cleaned audit logs", "count", n, "before", before)
+	}
 }
 
 func (s *Service) worker() {

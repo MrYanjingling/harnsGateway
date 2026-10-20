@@ -17,6 +17,7 @@ import (
 	baseoptions "harns-platform/pkg/generic/options"
 	"harns-platform/pkg/platform/audit"
 	"harns-platform/pkg/platform/auth"
+	"harns-platform/pkg/platform/httpx"
 	"harns-platform/pkg/platform/migrate"
 )
 
@@ -29,6 +30,7 @@ type Options struct {
 	MySQL    MySQLOptions         `json:"mysql"`
 	MinIO    MinIOOptions         `json:"minio"`
 	Security auth.Config          `json:"security"`
+	CORS     httpx.CORSConfig     `json:"cors"`
 	Audit    audit.Config         `json:"audit"`
 	Migrate  bool                 `json:"migrate"`
 	baseoptions.BaseOptions
@@ -109,6 +111,7 @@ func NewDefaultOptions() *Options {
 			Bucket:   _defaultMinIOBucket,
 		},
 		Security: auth.DefaultConfig(),
+		CORS:     httpx.DefaultCORSConfig(),
 		Audit:    audit.DefaultConfig(),
 		Migrate:  true,
 	}
@@ -127,6 +130,7 @@ func (o *Options) Config(stopCh <-chan struct{}) (*config.Config, error) {
 		KeyFile:     o.KeyFile,
 		MinIOBucket: o.MinIO.Bucket,
 		Security:    o.Security,
+		CORS:        o.CORS,
 		Audit:       o.Audit,
 	}
 

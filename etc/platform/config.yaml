@@ -67,6 +67,18 @@ security:
   rsa-enabled: true
   # Captcha expiry in seconds.
   captcha-ttl-seconds: 300
+  # Role code that grants all permissions ("*").
+  super-role-code: admin
+
+# CORS configuration.
+cors:
+  allowed-origins:
+    - "*"
+  allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+  allowed-headers: [Authorization, Content-Type, X-Trace-Id]
+  expose-headers: [X-Trace-Id]
+  allow-credentials: false
+  max-age-seconds: 3600
 
 # Audit log (write operations only; request/response bodies truncated and masked).
 audit:
@@ -75,6 +87,8 @@ audit:
   max-body-bytes: 16384
   # Async queue size; logs are dropped when full.
   queue-size: 1024
+  # Keep audit logs for this many days (6 months = 180).
+  retention-days: 180
 
 # Logging configuration.
 logging:

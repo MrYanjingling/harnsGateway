@@ -32,11 +32,11 @@ type Log struct {
 // ListQuery is the audit log query.
 type ListQuery struct {
 	apis.PageQuery
-	App        string `form:"app"`
-	UserID     string `form:"userId"`
-	Path       string `form:"path"`
-	Method     string `form:"method"`
-	ResultCode *int   `form:"resultCode"`
-	Start      string `form:"start"`
-	End        string `form:"end"`
+	App        string `json:"app" form:"app"`
+	UserID     string `json:"userId" form:"userId"`
+	Path       string `json:"path" form:"path"`
+	Method     string `json:"method" form:"method"`
+	ResultCode *int   `json:"resultCode" form:"resultCode"`
+	Start      string `json:"start" form:"start"`
+	End        string `json:"end" form:"end"`
 }

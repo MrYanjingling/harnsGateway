@@ -106,3 +106,25 @@ endef
 .PHONY: verify-golang
 verify-golang:
 	hack/verify-golang.sh
+
+.PHONY: test
+test: verify-golang
+	go test -vet=off ./...
+
+.PHONY: lint
+lint: verify-golang
+	@echo "check gofmt ..."
+	gofmt -l cmd pkg migrations
+	@echo "check go vet ..."
+	go vet $(shell go list ./... | grep -v '/pkg/tsdb/')
+
+.PHONY: check
+check: lint test
+
+.PHONY: fmt
+fmt:
+	gofmt -w cmd pkg migrations
+
+.PHONY: clean
+clean:
+	rm -rf $(OUT_DIR)

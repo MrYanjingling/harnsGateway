@@ -27,6 +27,7 @@ type UserVo struct {
 	OrgIDs            []string   `json:"orgIds"`
 	Roles             []*RoleVo  `json:"roles"`
 	Orgs              []*OrgVo   `json:"orgs"`
+	Permissions       []string   `json:"permissions"`
 }
 
 // RoleVo 是对外返回的角色对象。
@@ -37,6 +38,7 @@ type RoleVo struct {
 	Code        string    `json:"code"`
 	Description string    `json:"description"`
 	Status      string    `json:"status"`
+	Permissions []string  `json:"permissions"`
 	CreatedUser string    `json:"createdUser"`
 	UpdatedUser string    `json:"updatedUser"`
 	CreatedTime time.Time `json:"createdTime"`
