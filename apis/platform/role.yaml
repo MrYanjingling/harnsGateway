@@ -139,10 +139,6 @@ components:
         code: { type: string, maxLength: 64 }
         description: { type: string, maxLength: 255 }
         status: { type: string, enum: [enabled, disabled], default: enabled }
-        permissions:
-          type: array
-          items: { type: string }
-          description: Permission codes, e.g. user:read, user:write, audit:read.
     UpdateRoleReq:
       type: object
       properties:
@@ -150,9 +146,6 @@ components:
         code: { type: string, maxLength: 64 }
         description: { type: string, maxLength: 255 }
         status: { type: string, enum: [enabled, disabled] }
-        permissions:
-          type: array
-          items: { type: string }
     RoleVo:
       type: object
       properties:
@@ -162,9 +155,6 @@ components:
         code: { type: string }
         description: { type: string }
         status: { type: string, enum: [enabled, disabled] }
-        permissions:
-          type: array
-          items: { type: string }
         createdUser: { type: string }
         updatedUser: { type: string }
         createdTime: { type: string, format: date-time }

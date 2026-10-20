@@ -76,13 +76,11 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 - 业务（app=iot）：`/api/v1/iot/users`、`/roles`、`/orgs`、`/audit-logs`
 - 探针：`GET /api/v1/health`、`GET /api/v1/ready`
 
-### 认证与权限
+### 认证
 
 - 迁移会初始化管理员：`admin / admin@123`（首次登录后请修改）。
 - JWT(HS256) + Redis 会话；密码支持 RSA-OAEP(SHA-256) 加密。
 - 连续 5 次登录失败锁定 60 分钟。
-- RBAC：角色携带权限（`user:read/write`、`role:read/write`、`org:read/write`、
-  `audit:read`）；`security.super-role-code`（默认 `admin`）对应角色拥有 `*`。
 
 ### 审计
 

@@ -65,7 +65,7 @@
 - 7.5 认证配置 `security`（见 F4）：`token-secret` 必须 ≥32 字节，变更会使所有旧 token 失效；`rsa-enabled=true` 时启动依赖 MinIO。
 - 7.6 启动自检：启动时 Ping MySQL/Redis 并配置连接池（`max-open-conns`/`max-idle-conns`/`conn-max-lifetime-minutes`）；`migrate: true` 时执行内嵌迁移（`migrations/*.sql` → `schema_migrations`）。任一失败即启动失败。
 - 7.7 探针：`GET /api/v1/health`（存活，恒 200）、`GET /api/v1/ready`（检查 DB/Redis，失败返回 503）。
-- 7.8 授权/审计/CORS：`security.super-role-code`（默认 `admin`）；`audit.retention-days`（默认 180）；CORS 见 `cors` 段（§5.8）。
+- 7.8 审计/CORS：`audit.retention-days`（默认 180）；CORS 见 `cors` 段（§5.8）。
 
 ## 8. 日志规范
 
@@ -227,7 +227,7 @@
   - RSA：启动时在 MinIO 检查 `login-rsa-private.pem`/`login-rsa-public.pem`，缺失才生成；MinIO 不可达 → 启动失败；解密用 **OAEP(SHA-256)**，失败按明文。
   - 验证码：生成后存 Redis `platform:captcha:<uuid>`（TTL `captcha-ttl-seconds`，默认 300s）；**登录中的校验默认注释未启用**（`auth/service.go` 的 login）。
   - Trace：由 `httpx.Trace()` 独立处理（`X-Trace-Id` 生成/回写 + 请求结果日志），与认证解耦；`auth.Auth()` 只管认证。
-  - 上下文：认证成功后把**完整用户**（`identity/v1.UserVo`，含 roles/orgs/permissions）注入 `c.Request.Context()`；业务层用 `principal.UserID(ctx)` / `principal.FromContext(ctx)` 取用户信息（见 §9.4）。
+  - 上下文：认证成功后把**完整用户**（`identity/v1.UserVo`，含 roles/orgs）注入 `c.Request.Context()`；业务层用 `principal.UserID(ctx)` / `principal.FromContext(ctx)` 取用户信息（见 §9.4）。
   - 会话失效：改密/重置密码/删除用户/账户禁用/登录失败锁定后，按 userId 清理该用户全部会话（Redis 反向索引 `platform:user_sessions:<userId>`）。
 - 约束：遵循 §3~§9；受保护接口（users/roles/orgs）挂鉴权中间件；`health`/login/logout/publicKey 放行。
 - 错误码：`10030 login_expired(401)`、`10031 unauthorized(401)`、`10032 username_password_error(400)`、`10033 account_disabled(400)`、`10034 account_locked(400)`、`10035 login_failed(500)`。
@@ -255,7 +255,7 @@
 - 落库（异步）：有界队列；满则丢弃并告警；失败不影响响应。
 - 字段：`app`（由路径解析，auth 记 `platform`）、`traceId`、`userId/userName`（`principal`）、`operationType/operationDesc`（路由 `httpx.WithOperation` 显式声明）、`method/path/query/ip/userAgent`、`requestBody/responseBody`、`status/resultCode/errorMsg`、`durationMs`。
 - 入参/出参：仅 JSON；按 16KB 截断；敏感键（password/authKey/token/accessKey/secretKey/ak/sk/secret）脱敏为 `***`；非 JSON 记 `<non-json body omitted>`。
-- 查询：`GET /api/v1/iot/audit-logs`（需 `audit:read`；分页 + app/userId/path/method/resultCode/start/end）。
+- 查询：`GET /api/v1/iot/audit-logs`（分页 + app/userId/path/method/resultCode/start/end）。
 - 保留：`audit.retention-days`（默认 180 天）；启动时及每 24h 清理过期日志。
 - 验收标准：
   - [ ] 写操作落 `audit_logs`，GET 不落
@@ -266,17 +266,7 @@
   - [ ] 审计查询分页与筛选可用
   - [ ] 超过保留期的日志被自动清理
 
-### F6. 权限（RBAC）
-- 角色携带权限（`role_permissions`）：`user:read`/`user:write`、`role:read`/`role:write`、`org:read`/`org:write`、`audit:read`。
-- 用户权限由角色聚合进会话；`security.super-role-code`（默认 `admin`）对应角色获得 `*`。
-- 路由用 `httpx.RequirePermission` 校验；无权限返回 403 `error.forbidden`。
-- 迁移 `0007_seed_admin.sql` 初始化管理员 `admin / admin@123`（角色 `admin`，权限 `*`），首次登录后必须改密。
-- 验收：
-  - [ ] 有权限访问 200，无权限 403
-  - [ ] 超级角色可访问全部接口
-  - [ ] 角色创建/更新可设置权限
-
-<!-- 继续 F7 ... -->
+<!-- 继续 F6 ... -->
 
 ## 11. 任务提示词模板（每次 vibe coding 用）
 

@@ -16,26 +16,26 @@ import (
 // InstallHandler 在给定路由组上注册用户、角色、组织接口。
 func InstallHandler(rg *gin.RouterGroup, svc *Service) {
 	users := rg.Group("/users")
-	users.POST("", httpx.RequirePermission(httpx.PermUserWrite), httpx.WithOperation(httpx.OpCreate, "创建用户"), createUser(svc))
-	users.GET("", httpx.RequirePermission(httpx.PermUserRead), httpx.WithOperation(httpx.OpQuery, "分页查询用户"), listUsers(svc))
-	users.GET("/:id", httpx.RequirePermission(httpx.PermUserRead), httpx.WithOperation(httpx.OpQuery, "查询用户详情"), getUserById(svc))
-	users.PUT("/:id", httpx.RequirePermission(httpx.PermUserWrite), httpx.WithOperation(httpx.OpUpdate, "更新用户"), updateUserById(svc))
-	users.PUT("/:id/password", httpx.RequirePermission(httpx.PermUserWrite), httpx.WithOperation(httpx.OpUpdate, "重置用户密码"), resetUserPassword(svc))
-	users.DELETE("/:id", httpx.RequirePermission(httpx.PermUserWrite), httpx.WithOperation(httpx.OpDelete, "删除用户"), deleteUserById(svc))
+	users.POST("", httpx.WithOperation(httpx.OpCreate, "创建用户"), createUser(svc))
+	users.GET("", httpx.WithOperation(httpx.OpQuery, "分页查询用户"), listUsers(svc))
+	users.GET("/:id", httpx.WithOperation(httpx.OpQuery, "查询用户详情"), getUserById(svc))
+	users.PUT("/:id", httpx.WithOperation(httpx.OpUpdate, "更新用户"), updateUserById(svc))
+	users.PUT("/:id/password", httpx.WithOperation(httpx.OpUpdate, "重置用户密码"), resetUserPassword(svc))
+	users.DELETE("/:id", httpx.WithOperation(httpx.OpDelete, "删除用户"), deleteUserById(svc))
 
 	roles := rg.Group("/roles")
-	roles.POST("", httpx.RequirePermission(httpx.PermRoleWrite), httpx.WithOperation(httpx.OpCreate, "创建角色"), createRole(svc))
-	roles.GET("", httpx.RequirePermission(httpx.PermRoleRead), httpx.WithOperation(httpx.OpQuery, "分页查询角色"), listRoles(svc))
-	roles.GET("/:id", httpx.RequirePermission(httpx.PermRoleRead), httpx.WithOperation(httpx.OpQuery, "查询角色详情"), getRoleById(svc))
-	roles.PUT("/:id", httpx.RequirePermission(httpx.PermRoleWrite), httpx.WithOperation(httpx.OpUpdate, "更新角色"), updateRoleById(svc))
-	roles.DELETE("/:id", httpx.RequirePermission(httpx.PermRoleWrite), httpx.WithOperation(httpx.OpDelete, "删除角色"), deleteRoleById(svc))
+	roles.POST("", httpx.WithOperation(httpx.OpCreate, "创建角色"), createRole(svc))
+	roles.GET("", httpx.WithOperation(httpx.OpQuery, "分页查询角色"), listRoles(svc))
+	roles.GET("/:id", httpx.WithOperation(httpx.OpQuery, "查询角色详情"), getRoleById(svc))
+	roles.PUT("/:id", httpx.WithOperation(httpx.OpUpdate, "更新角色"), updateRoleById(svc))
+	roles.DELETE("/:id", httpx.WithOperation(httpx.OpDelete, "删除角色"), deleteRoleById(svc))
 
 	orgs := rg.Group("/orgs")
-	orgs.GET("/tree", httpx.RequirePermission(httpx.PermOrgRead), httpx.WithOperation(httpx.OpQuery, "查询组织树"), treeOrgs(svc))
-	orgs.POST("", httpx.RequirePermission(httpx.PermOrgWrite), httpx.WithOperation(httpx.OpCreate, "创建组织"), createOrg(svc))
-	orgs.GET("/:id", httpx.RequirePermission(httpx.PermOrgRead), httpx.WithOperation(httpx.OpQuery, "查询组织详情"), getOrgById(svc))
-	orgs.PUT("/:id", httpx.RequirePermission(httpx.PermOrgWrite), httpx.WithOperation(httpx.OpUpdate, "更新组织"), updateOrgById(svc))
-	orgs.DELETE("/:id", httpx.RequirePermission(httpx.PermOrgWrite), httpx.WithOperation(httpx.OpDelete, "删除组织"), deleteOrgById(svc))
+	orgs.GET("/tree", httpx.WithOperation(httpx.OpQuery, "查询组织树"), treeOrgs(svc))
+	orgs.POST("", httpx.WithOperation(httpx.OpCreate, "创建组织"), createOrg(svc))
+	orgs.GET("/:id", httpx.WithOperation(httpx.OpQuery, "查询组织详情"), getOrgById(svc))
+	orgs.PUT("/:id", httpx.WithOperation(httpx.OpUpdate, "更新组织"), updateOrgById(svc))
+	orgs.DELETE("/:id", httpx.WithOperation(httpx.OpDelete, "删除组织"), deleteOrgById(svc))
 }
 
 // ---------- User handlers ----------
@@ -317,7 +317,6 @@ func toUserVo(u *User) *v1.UserVo {
 		OrgIDs:            u.OrgIDs,
 		Roles:             toRoleVos(u.Roles),
 		Orgs:              toOrgVos(u.Orgs),
-		Permissions:       u.Permissions,
 	}
 	if u.BirthDate != nil {
 		vo.BirthDate = u.BirthDate.Format("2006-01-02")
@@ -341,7 +340,6 @@ func toRoleVo(r *Role) *v1.RoleVo {
 		Code:        r.Code,
 		Description: r.Description,
 		Status:      r.Status,
-		Permissions: r.Permissions,
 		CreatedUser: r.CreatedUser,
 		UpdatedUser: r.UpdatedUser,
 		CreatedTime: r.CreatedTime,

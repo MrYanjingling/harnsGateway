@@ -67,8 +67,6 @@ security:
   rsa-enabled: true
   # Captcha expiry in seconds.
   captcha-ttl-seconds: 300
-  # Role code that grants all permissions ("*").
-  super-role-code: admin
 
 # CORS configuration.
 cors:

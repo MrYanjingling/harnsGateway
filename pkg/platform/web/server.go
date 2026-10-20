@@ -74,7 +74,6 @@ func (s *Server) InstallHandlers() error {
 	if err != nil {
 		return fmt.Errorf("init auth service failed: %w", err)
 	}
-	identitySvc.SetSuperRoleCode(s.Config.Security.SuperRoleCode)
 	identitySvc.SetSessionInvalidator(authSvc)
 
 	var auditMW gin.HandlerFunc = func(c *gin.Context) { c.Next() }
@@ -93,7 +92,7 @@ func (s *Server) InstallHandlers() error {
 	iot := v1.Group("/iot", authSvc.Auth(), auditMW)
 	identity.InstallHandler(iot, identitySvc)
 	if s.audit != nil {
-		iot.GET("/audit-logs", httpx.RequirePermission(httpx.PermAuditRead), httpx.WithOperation(httpx.OpQuery, "查询审计日志"), s.audit.List)
+		iot.GET("/audit-logs", httpx.WithOperation(httpx.OpQuery, "查询审计日志"), s.audit.List)
 	}
 	return nil
 }

@@ -78,14 +78,11 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 - IoT (`app=iot`): `/api/v1/iot/users`, `/roles`, `/orgs`, `/audit-logs`
 - Probes: `GET /api/v1/health`, `GET /api/v1/ready`
 
-### Auth and permissions
+### Auth
 
 - Bootstrap admin is seeded by migration: `admin / admin@123` (change it after first login).
 - JWT (HS256) + Redis session; password may be RSA-OAEP(SHA-256) encrypted.
 - Account locks for 60 minutes after 5 consecutive failures.
-- RBAC: roles carry permissions (`user:read/write`, `role:read/write`, `org:read/write`,
-  `audit:read`); the role code configured by `security.super-role-code` (default `admin`)
-  gets `*` (all permissions).
 
 ### Audit
 

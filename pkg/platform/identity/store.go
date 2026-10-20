@@ -3,7 +3,6 @@ package identity
 import (
 	"context"
 	"database/sql"
-	"sort"
 	"strings"
 	"time"
 
@@ -257,17 +256,9 @@ func (s *Store) fillUserRelations(ctx context.Context, users []*User) error {
 		return err
 	}
 
-	roleIDs := collectRelationIDs(roleMap)
-	roleObjs, err := s.rolesByIDs(ctx, roleIDs)
+	roleObjs, err := s.rolesByIDs(ctx, collectRelationIDs(roleMap))
 	if err != nil {
 		return err
-	}
-	permMap, err := s.permissionsByRoleIDs(ctx, roleIDs)
-	if err != nil {
-		return err
-	}
-	for id, r := range roleObjs {
-		r.Permissions = permMap[id]
 	}
 	orgObjs, err := s.orgsByIDs(ctx, collectRelationIDs(orgMap))
 	if err != nil {
@@ -279,21 +270,6 @@ func (s *Store) fillUserRelations(ctx context.Context, users []*User) error {
 		u.OrgIDs = orgMap[u.ID]
 		u.Roles = pickRoles(u.RoleIDs, roleObjs)
 		u.Orgs = pickOrgs(u.OrgIDs, orgObjs)
-
-		codes := make([]string, 0, len(u.Roles))
-		permissionSet := make(map[string]struct{})
-		for _, r := range u.Roles {
-			codes = append(codes, r.Code)
-			for _, p := range r.Permissions {
-				permissionSet[p] = struct{}{}
-			}
-		}
-		u.RoleCodes = codes
-		u.Permissions = make([]string, 0, len(permissionSet))
-		for p := range permissionSet {
-			u.Permissions = append(u.Permissions, p)
-		}
-		sort.Strings(u.Permissions)
 	}
 	return nil
 }
@@ -398,72 +374,30 @@ func (s *Store) relationMap(ctx context.Context, table, column string, userIDs [
 
 // ---------- Role ----------
 
-func (s *Store) CreateRoleWithPermissions(ctx context.Context, r *Role, permissions []string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	if _, err := tx.ExecContext(ctx,
+func (s *Store) CreateRole(ctx context.Context, r *Role) error {
+	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO roles (`+roleColumns+`) VALUES (?,?,?,?,?,?,?,?,?,?)`,
 		r.ID, r.Version, r.Name, r.Code, r.Description, r.Status,
-		r.CreatedUser, r.UpdatedUser, r.CreatedTime, r.UpdatedTime); err != nil {
-		return err
-	}
-	if err := insertRolePermissions(ctx, tx, r.ID, permissions); err != nil {
-		return err
-	}
-	return tx.Commit()
+		r.CreatedUser, r.UpdatedUser, r.CreatedTime, r.UpdatedTime)
+	return err
 }
 
 func (s *Store) GetRole(ctx context.Context, id string) (*Role, error) {
-	r, err := scanRole(s.db.QueryRowContext(ctx, `SELECT `+roleColumns+` FROM roles WHERE id = ?`, id))
-	if err != nil {
-		return nil, err
-	}
-	perms, err := s.permissionsByRoleIDs(ctx, []string{id})
-	if err != nil {
-		return nil, err
-	}
-	r.Permissions = perms[id]
-	return r, nil
+	return scanRole(s.db.QueryRowContext(ctx, `SELECT `+roleColumns+` FROM roles WHERE id = ?`, id))
 }
 
-func (s *Store) UpdateRoleWithPermissions(ctx context.Context, r *Role, permissions []string) (int64, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-
-	res, err := tx.ExecContext(ctx,
+func (s *Store) UpdateRole(ctx context.Context, r *Role) (int64, error) {
+	res, err := s.db.ExecContext(ctx,
 		`UPDATE roles SET name=?, code=?, description=?, status=?,
 		 updated_user=?, updated_time=?, version=version+1 WHERE id=?`,
 		r.Name, r.Code, r.Description, r.Status, r.UpdatedUser, r.UpdatedTime, r.ID)
 	if err != nil {
 		return 0, err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-	if n == 0 {
-		return 0, nil
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM role_permissions WHERE role_id=?`, r.ID); err != nil {
-		return 0, err
-	}
-	if err := insertRolePermissions(ctx, tx, r.ID, permissions); err != nil {
-		return 0, err
-	}
-	if err := tx.Commit(); err != nil {
-		return 0, err
-	}
-	return n, nil
+	return res.RowsAffected()
 }
 
-// DeleteRole 物理删除角色并清理用户角色/角色权限关联（同一事务）。
+// DeleteRole 物理删除角色并清理用户角色关联（同一事务）。
 func (s *Store) DeleteRole(ctx context.Context, id string) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -483,9 +417,6 @@ func (s *Store) DeleteRole(ctx context.Context, id string) (int64, error) {
 		return 0, nil
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM user_roles WHERE role_id=?`, id); err != nil {
-		return 0, err
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM role_permissions WHERE role_id=?`, id); err != nil {
 		return 0, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -522,13 +453,7 @@ func (s *Store) ListRoles(ctx context.Context, q apis.PageQuery, keyword string)
 		}
 		list = append(list, r)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, 0, err
-	}
-	if err := s.fillRolePermissions(ctx, list); err != nil {
-		return nil, 0, err
-	}
-	return list, total, nil
+	return list, total, rows.Err()
 }
 
 func (s *Store) ExistsRoleName(ctx context.Context, name, excludeID string) (bool, error) {
@@ -539,62 +464,7 @@ func (s *Store) ExistsRoleCode(ctx context.Context, code, excludeID string) (boo
 	return s.exists(ctx, "roles", "code", code, excludeID)
 }
 
-func (s *Store) roleIDsOfUsers(ctx context.Context, userIDs []string) (map[string][]string, error) {
-	return s.relationMap(ctx, "user_roles", "role_id", userIDs)
-}
-
-func (s *Store) permissionsByRoleIDs(ctx context.Context, roleIDs []string) (map[string][]string, error) {
-	out := make(map[string][]string, len(roleIDs))
-	if len(roleIDs) == 0 {
-		return out, nil
-	}
-	q := `SELECT role_id, permission FROM role_permissions WHERE role_id IN (` + placeholders(len(roleIDs)) + `)`
-	rows, err := s.db.QueryContext(ctx, q, toAny(roleIDs)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var roleID, permission string
-		if err := rows.Scan(&roleID, &permission); err != nil {
-			return nil, err
-		}
-		out[roleID] = append(out[roleID], permission)
-	}
-	return out, rows.Err()
-}
-
-func (s *Store) fillRolePermissions(ctx context.Context, roles []*Role) error {
-	if len(roles) == 0 {
-		return nil
-	}
-	ids := make([]string, 0, len(roles))
-	for _, r := range roles {
-		ids = append(ids, r.ID)
-	}
-	perms, err := s.permissionsByRoleIDs(ctx, ids)
-	if err != nil {
-		return err
-	}
-	for _, r := range roles {
-		r.Permissions = perms[r.ID]
-	}
-	return nil
-}
-
-func insertRolePermissions(ctx context.Context, tx *sql.Tx, roleID string, permissions []string) error {
-	if len(permissions) == 0 {
-		return nil
-	}
-	for _, p := range permissions {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)`, roleID, p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
+// ---------- Org ----------
 // ---------- Org ----------
 // ---------- Org ----------
 

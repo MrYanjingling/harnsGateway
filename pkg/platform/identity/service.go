@@ -24,17 +24,11 @@ type SessionInvalidator interface {
 // Service 是身份与组织模块的业务层。
 type Service struct {
 	store              *Store
-	superRoleCode      string
 	sessionInvalidator SessionInvalidator
 }
 
 func NewService(store *Store) *Service {
 	return &Service{store: store}
-}
-
-// SetSuperRoleCode sets the role code that grants all permissions ("*").
-func (s *Service) SetSuperRoleCode(code string) {
-	s.superRoleCode = code
 }
 
 // SetSessionInvalidator sets the hook used to invalidate user sessions.
@@ -45,33 +39,6 @@ func (s *Service) SetSessionInvalidator(inv SessionInvalidator) {
 func (s *Service) invalidateSessions(ctx context.Context, userID string) {
 	if s.sessionInvalidator != nil && userID != "" {
 		_ = s.sessionInvalidator.InvalidateUserSessions(ctx, userID)
-	}
-}
-
-func (s *Service) applySuperPermissions(users ...*User) {
-	if s.superRoleCode == "" {
-		return
-	}
-	for _, u := range users {
-		if u == nil {
-			continue
-		}
-		for _, code := range u.RoleCodes {
-			if code != s.superRoleCode {
-				continue
-			}
-			hasAll := false
-			for _, p := range u.Permissions {
-				if p == "*" {
-					hasAll = true
-					break
-				}
-			}
-			if !hasAll {
-				u.Permissions = append(u.Permissions, "*")
-			}
-			break
-		}
 	}
 }
 
@@ -150,7 +117,6 @@ func (s *Service) GetUser(ctx context.Context, id string) (*User, error) {
 	if err != nil {
 		return nil, response.ErrInternal(err)
 	}
-	s.applySuperPermissions(u)
 	return u, nil
 }
 
@@ -163,7 +129,6 @@ func (s *Service) GetUserByUserName(ctx context.Context, userName string) (*User
 	if err != nil {
 		return nil, response.ErrInternal(err)
 	}
-	s.applySuperPermissions(u)
 	return u, nil
 }
 
@@ -299,7 +264,6 @@ func (s *Service) ListUsers(ctx context.Context, q apis.PageQuery, keyword strin
 	if err != nil {
 		return nil, 0, response.ErrInternal(err)
 	}
-	s.applySuperPermissions(list...)
 	return list, total, nil
 }
 
@@ -333,9 +297,8 @@ func (s *Service) CreateRole(ctx context.Context, req *v1.CreateRoleReq) (*Role,
 		Code:        req.Code,
 		Description: req.Description,
 		Status:      orDefault(req.Status, StatusEnabled),
-		Permissions: dedupe(req.Permissions),
 	}
-	if err := s.store.CreateRoleWithPermissions(ctx, r, r.Permissions); err != nil {
+	if err := s.store.CreateRole(ctx, r); err != nil {
 		return nil, response.ErrInternal(err)
 	}
 	return r, nil
@@ -380,13 +343,10 @@ func (s *Service) UpdateRole(ctx context.Context, id string, req *v1.UpdateRoleR
 	}
 	setIf(&r.Description, req.Description)
 	setIf(&r.Status, req.Status)
-	if req.Permissions != nil {
-		r.Permissions = dedupe(*req.Permissions)
-	}
 	r.UpdatedUser = principal.UserID(ctx)
 	r.UpdatedTime = time.Now()
 
-	rows, err := s.store.UpdateRoleWithPermissions(ctx, r, r.Permissions)
+	rows, err := s.store.UpdateRole(ctx, r)
 	if err != nil {
 		return nil, response.ErrInternal(err)
 	}
