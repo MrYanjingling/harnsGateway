@@ -80,7 +80,8 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 
 ### Auth
 
-- Bootstrap admin is seeded by migration: `admin / admin@123` (change it after first login).
+- A super administrator role (`code=admin`) and account `admin / admin@123` are seeded by
+  migration; change the password after first login.
 - JWT (HS256) + Redis session; password may be RSA-OAEP(SHA-256) encrypted.
 - Account locks for 60 minutes after 5 consecutive failures.
 

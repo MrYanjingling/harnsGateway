@@ -78,7 +78,7 @@ cp etc/platform/config.yaml /etc/platform/config.yaml
 
 ### 认证
 
-- 迁移会初始化管理员：`admin / admin@123`（首次登录后请修改）。
+- 迁移会初始化超级管理员角色（`code=admin`）与账号 `admin / admin@123`（首次登录后请修改）。
 - JWT(HS256) + Redis 会话；密码支持 RSA-OAEP(SHA-256) 加密。
 - 连续 5 次登录失败锁定 60 分钟。
 
